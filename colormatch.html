@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Match</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .back-button {
+            position: fixed; top: 20px; left: 20px;
+            background: #ec4899; color: #fff;
+            padding: 10px 20px; border-radius: 5px;
+            text-decoration: none; font-weight: bold; z-index: 100;
+        }
+        .game-container { text-align: center; }
+        h1 { color: #fff; font-size: 48px; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        canvas { border: 3px solid #ec4899; box-shadow: 0 0 30px rgba(236, 72, 153, 0.5); cursor: pointer; }
+        .hud {
+            color: #fff; font-size: 24px; margin-bottom: 15px;
+            display: flex; justify-content: center; gap: 40px;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-button">← Back</a>
+    <div class="game-container">
+        <h1>🎨 COLOR MATCH</h1>
+        <div class="hud">
+            <div>Score: <span id="score">0</span></div>
+            <div>Moves: <span id="moves">30</span></div>
+            <div>Level: <span id="level">1</span></div>
+        </div>
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+        <p style="color: #fff; margin-top: 15px;">Click tiles to swap | Match 3+ colors!</p>
+    </div>
+    <script src="colormatch.js"></script>
+</body>
+</html>

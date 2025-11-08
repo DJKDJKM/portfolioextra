@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breakout</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3799 0%, #0c2461 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #e74c3c;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            z-index: 100;
+        }
+        .game-container { text-align: center; }
+        h1 { color: #fff; font-size: 48px; margin-bottom: 20px; }
+        canvas {
+            border: 3px solid #e74c3c;
+            box-shadow: 0 0 30px rgba(231, 76, 60, 0.5);
+            background: #000;
+        }
+        .hud {
+            color: #fff;
+            font-size: 24px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+        }
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            border: 3px solid #e74c3c;
+        }
+        .game-over.show { display: block; }
+        .game-over h2 { font-size: 48px; color: #e74c3c; margin-bottom: 20px; }
+        .game-over p { font-size: 24px; color: #fff; margin-bottom: 15px; }
+        .game-over button {
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-button">← Back</a>
+    <div class="game-container">
+        <h1>🧱 BREAKOUT</h1>
+        <div class="hud">
+            <div>Score: <span id="score">0</span></div>
+            <div>Lives: <span id="lives">3</span></div>
+            <div>Level: <span id="level">1</span></div>
+        </div>
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+        <p style="color: #fff; margin-top: 15px;">Move: Mouse or Arrow Keys</p>
+        <div class="game-over" id="gameOver">
+            <h2>Game Over!</h2>
+            <p>Score: <span id="finalScore">0</span></p>
+            <p>Best: <span id="bestScore">0</span></p>
+            <button onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+    <script src="breakout.js"></script>
+</body>
+</html>

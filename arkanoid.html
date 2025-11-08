@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arkanoid Deluxe</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .back-button {
+            position: fixed; top: 20px; left: 20px;
+            background: #9c27b0; color: #fff;
+            padding: 10px 20px; border-radius: 5px;
+            text-decoration: none; font-weight: bold; z-index: 100;
+        }
+        .game-container { text-align: center; }
+        h1 { color: #fff; font-size: 48px; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        canvas { border: 3px solid #9c27b0; box-shadow: 0 0 30px rgba(156, 39, 176, 0.5); }
+        .hud {
+            color: #fff; font-size: 24px; margin-bottom: 15px;
+            display: flex; justify-content: center; gap: 40px;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-button">← Back</a>
+    <div class="game-container">
+        <h1>🎮 ARKANOID DELUXE</h1>
+        <div class="hud">
+            <div>Score: <span id="score">0</span></div>
+            <div>Lives: <span id="lives">3</span></div>
+            <div>Level: <span id="level">1</span></div>
+        </div>
+        <canvas id="gameCanvas" width="600" height="700"></canvas>
+        <p style="color: #fff; margin-top: 15px;">Mouse: Move Paddle | Break all bricks!</p>
+    </div>
+    <script src="arkanoid.js"></script>
+</body>
+</html>

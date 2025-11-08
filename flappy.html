@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Space</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(180deg, #4a148c 0%, #6a1b9a 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #e91e63;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            z-index: 100;
+        }
+
+        .game-container {
+            position: relative;
+            text-align: center;
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        canvas {
+            border: 3px solid #e91e63;
+            box-shadow: 0 0 30px rgba(233, 30, 99, 0.5);
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .score-display {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 64px;
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            border: 3px solid #e91e63;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #e91e63;
+        }
+
+        .game-over p {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .game-over .medal {
+            font-size: 64px;
+            margin: 20px 0;
+        }
+
+        .game-over button {
+            background: #e91e63;
+            color: #fff;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .game-over button:hover {
+            background: #c2185b;
+        }
+
+        .start-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            border: 3px solid #e91e63;
+        }
+
+        .start-screen h2 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            color: #e91e63;
+        }
+
+        .start-screen p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            color: #fff;
+        }
+
+        .start-screen button {
+            background: #e91e63;
+            color: #fff;
+            border: none;
+            padding: 15px 40px;
+            font-size: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .start-screen button:hover {
+            background: #c2185b;
+        }
+
+        .controls {
+            color: #fff;
+            margin-top: 15px;
+            font-size: 18px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-button">← Back</a>
+
+    <div class="game-container">
+        <h1>🐦 Flappy Space</h1>
+
+        <canvas id="gameCanvas" width="480" height="640"></canvas>
+
+        <div class="score-display" id="score">0</div>
+
+        <div class="controls">
+            Click or Press SPACE to Flap!
+        </div>
+
+        <div class="start-screen" id="startScreen">
+            <h2>Flappy Space</h2>
+            <p>Navigate through the pipes!<br>Don't hit them or the ground!</p>
+            <button onclick="startGame()">Start Flying</button>
+        </div>
+
+        <div class="game-over" id="gameOver">
+            <h2>Game Over!</h2>
+            <div class="medal" id="medal"></div>
+            <p>Score: <span id="finalScore">0</span></p>
+            <p>Best: <span id="bestScore">0</span></p>
+            <button onclick="restartGame()">Try Again</button>
+        </div>
+    </div>
+
+    <script src="flappy.js"></script>
+</body>
+</html>

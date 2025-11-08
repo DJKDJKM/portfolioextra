@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac Maze</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .back-button {
+            position: fixed; top: 20px; left: 20px;
+            background: #ffff00; color: #000;
+            padding: 10px 20px; border-radius: 5px;
+            text-decoration: none; font-weight: bold; z-index: 100;
+        }
+        .game-container { text-align: center; }
+        h1 { color: #ffff00; font-size: 48px; margin-bottom: 20px; }
+        canvas { border: 3px solid #0000ff; box-shadow: 0 0 30px rgba(0, 0, 255, 0.5); }
+        .hud {
+            color: #ffff00; font-size: 24px; margin-bottom: 15px;
+            display: flex; justify-content: center; gap: 40px;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-button">← Back</a>
+    <div class="game-container">
+        <h1>👻 PAC MAZE</h1>
+        <div class="hud">
+            <div>Score: <span id="score">0</span></div>
+            <div>Lives: <span id="lives">3</span></div>
+            <div>Level: <span id="level">1</span></div>
+        </div>
+        <canvas id="gameCanvas" width="560" height="620"></canvas>
+        <p style="color: #ffff00; margin-top: 15px;">Arrow Keys: Move | Collect all dots!</p>
+    </div>
+    <script src="pacman.js"></script>
+</body>
+</html>

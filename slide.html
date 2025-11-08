@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sliding Puzzle</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .back-button {
+            position: fixed; top: 20px; left: 20px;
+            background: #4a90e2; color: #fff;
+            padding: 10px 20px; border-radius: 5px;
+            text-decoration: none; font-weight: bold; z-index: 100;
+        }
+        .game-container { text-align: center; }
+        h1 { color: #fff; font-size: 48px; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        canvas { border: 3px solid #fff; box-shadow: 0 0 30px rgba(0, 0, 0, 0.5); cursor: pointer; }
+        .hud {
+            color: #fff; font-size: 24px; margin-bottom: 15px;
+            display: flex; justify-content: center; gap: 40px;
+        }
+        .controls {
+            margin-top: 15px;
+        }
+        .controls button {
+            background: #4a90e2;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        .controls button:hover {
+            background: #357abd;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-button">← Back</a>
+    <div class="game-container">
+        <h1>🧩 SLIDING PUZZLE</h1>
+        <div class="hud">
+            <div>Moves: <span id="moves">0</span></div>
+            <div>Time: <span id="time">0</span>s</div>
+        </div>
+        <canvas id="gameCanvas" width="500" height="500"></canvas>
+        <div class="controls">
+            <button onclick="newGame(3)">3x3 Easy</button>
+            <button onclick="newGame(4)">4x4 Medium</button>
+            <button onclick="newGame(5)">5x5 Hard</button>
+        </div>
+        <p style="color: #fff; margin-top: 15px;">Click tiles to slide them | Arrange in order!</p>
+    </div>
+    <script src="slide.js"></script>
+</body>
+</html>

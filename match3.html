@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gem Crush</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .back-button {
+            position: fixed; top: 20px; left: 20px;
+            background: #f093fb; color: #fff;
+            padding: 10px 20px; border-radius: 5px;
+            text-decoration: none; font-weight: bold; z-index: 100;
+        }
+        .game-container { text-align: center; }
+        h1 { color: #fff; font-size: 48px; margin-bottom: 20px; }
+        .hud {
+            color: #fff; font-size: 24px; margin-bottom: 15px;
+            display: flex; justify-content: center; gap: 40px;
+        }
+        canvas { border: 3px solid #f093fb; box-shadow: 0 0 30px rgba(240, 147, 251, 0.5); cursor: pointer; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-button">← Back</a>
+    <div class="game-container">
+        <h1>💎 GEM CRUSH</h1>
+        <div class="hud">
+            <div>Score: <span id="score">0</span></div>
+            <div>Moves: <span id="moves">30</span></div>
+        </div>
+        <canvas id="gameCanvas" width="560" height="560"></canvas>
+        <p style="color: #fff; margin-top: 15px;">Click two adjacent gems to swap</p>
+    </div>
+    <script src="match3.js"></script>
+</body>
+</html>

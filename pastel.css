@@ -1,0 +1,303 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', cursive;
+    background: linear-gradient(135deg, #fff5f7 0%, #ffe8f5 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.back-button {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background: #e7c6ff;
+    color: #8b5cf6;
+    padding: 10px 20px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+}
+
+.back-button:hover {
+    background: #d8b4fe;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.3);
+}
+
+.container {
+    max-width: 500px;
+    width: 100%;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+h1 {
+    font-size: 80px;
+    font-weight: bold;
+    background: linear-gradient(135deg, #ffd6ff 0%, #c8b6ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.scores {
+    display: flex;
+    gap: 10px;
+}
+
+.score-container {
+    background: linear-gradient(135deg, #ffd6ff 0%, #e7c6ff 100%);
+    border-radius: 15px;
+    padding: 10px 20px;
+    text-align: center;
+    min-width: 80px;
+    box-shadow: 0 4px 15px rgba(184, 192, 255, 0.2);
+}
+
+.score-label {
+    font-size: 13px;
+    color: #8b5cf6;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.score {
+    font-size: 25px;
+    color: #6d28d9;
+    font-weight: bold;
+}
+
+.instructions {
+    background: linear-gradient(135deg, #c8b6ff 0%, #b8c0ff 100%);
+    color: #fff;
+    padding: 15px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+    box-shadow: 0 4px 15px rgba(200, 182, 255, 0.3);
+}
+
+.instructions p {
+    margin-bottom: 8px;
+}
+
+.instructions p:last-child {
+    margin-bottom: 0;
+}
+
+.new-game-button {
+    background: linear-gradient(135deg, #e7c6ff 0%, #c8b6ff 100%);
+    color: #6d28d9;
+    border: none;
+    border-radius: 25px;
+    padding: 15px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 20px;
+    width: 100%;
+    box-shadow: 0 4px 15px rgba(184, 192, 255, 0.3);
+    transition: all 0.3s;
+}
+
+.new-game-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(184, 192, 255, 0.4);
+}
+
+.game-board {
+    position: relative;
+    background: linear-gradient(135deg, #ffd6ff 0%, #e7c6ff 100%);
+    border-radius: 20px;
+    padding: 15px;
+    width: 500px;
+    height: 500px;
+    box-shadow: 0 8px 30px rgba(184, 192, 255, 0.3);
+}
+
+.grid-container {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    right: 15px;
+    bottom: 15px;
+}
+
+.grid-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.grid-row:last-child {
+    margin-bottom: 0;
+}
+
+.grid-cell {
+    width: 106.25px;
+    height: 106.25px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 15px;
+}
+
+.tile-container {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    right: 15px;
+    bottom: 15px;
+}
+
+.tile {
+    position: absolute;
+    width: 106.25px;
+    height: 106.25px;
+    background: #ffd6ff;
+    border-radius: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 55px;
+    font-weight: bold;
+    color: #8b5cf6;
+    transition: all 0.15s ease-in-out;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.tile.tile-new {
+    animation: appear 0.2s ease-in-out;
+}
+
+.tile.tile-merged {
+    animation: pop 0.2s ease-in-out;
+}
+
+@keyframes appear {
+    0% {
+        transform: scale(0) rotate(-180deg);
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+@keyframes pop {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.2) rotate(5deg);
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+.tile-2 { background: #ffd6ff; color: #a855f7; }
+.tile-4 { background: #e7c6ff; color: #9333ea; }
+.tile-8 { background: #c8b6ff; color: #7c3aed; }
+.tile-16 { background: #b8c0ff; color: #6d28d9; }
+.tile-32 { background: #bbd0ff; color: #5b21b6; }
+.tile-64 { background: #a8dadc; color: #4c1d95; }
+.tile-128 { background: #ffc8dd; color: #fff; font-size: 45px; }
+.tile-256 { background: #ffafcc; color: #fff; font-size: 45px; }
+.tile-512 { background: #f72585; color: #fff; font-size: 45px; }
+.tile-1024 { background: #b5179e; color: #fff; font-size: 35px; }
+.tile-2048 { background: #7209b7; color: #fff; font-size: 35px; }
+.tile-4096 { background: #560bad; color: #fff; font-size: 30px; }
+.tile-8192 { background: #3a0ca3; color: #fff; font-size: 30px; }
+
+.game-message {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 214, 255, 0.97);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.game-message.hidden {
+    display: none;
+}
+
+.game-message p {
+    font-size: 60px;
+    font-weight: bold;
+    background: linear-gradient(135deg, #c8b6ff 0%, #b8c0ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 30px;
+}
+
+.retry-button {
+    background: linear-gradient(135deg, #e7c6ff 0%, #c8b6ff 100%);
+    color: #6d28d9;
+    border: none;
+    border-radius: 25px;
+    padding: 15px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(184, 192, 255, 0.3);
+    transition: all 0.3s;
+}
+
+.retry-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(184, 192, 255, 0.4);
+}
+
+@media (max-width: 520px) {
+    .game-board {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1;
+    }
+
+    .grid-cell, .tile {
+        width: calc((100% - 45px) / 4);
+        height: calc((100% - 45px) / 4);
+    }
+
+    h1 {
+        font-size: 50px;
+    }
+
+    .tile {
+        font-size: 35px;
+    }
+
+    .tile-128, .tile-256, .tile-512 {
+        font-size: 30px;
+    }
+
+    .tile-1024, .tile-2048 {
+        font-size: 25px;
+    }
+
+    .tile-4096, .tile-8192 {
+        font-size: 20px;
+    }
+}

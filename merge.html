@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruit Merge</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #a8e6cf 0%, #ffd3b6 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #ff8b94;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            z-index: 100;
+        }
+
+        .game-container {
+            position: relative;
+            text-align: center;
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .hud {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .hud-item {
+            text-align: center;
+        }
+
+        .hud-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .hud-value {
+            font-size: 28px;
+            color: #ff8b94;
+            font-weight: bold;
+        }
+
+        canvas {
+            border: 3px solid #fff;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            border-radius: 10px;
+            background: #fff;
+            cursor: crosshair;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.98);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            color: #ff8b94;
+        }
+
+        .game-over p {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #666;
+        }
+
+        .game-over button {
+            background: #ff8b94;
+            color: #fff;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .game-over button:hover {
+            background: #ff7782;
+        }
+
+        .next-fruit {
+            text-align: center;
+            margin-top: 15px;
+            color: #fff;
+            font-size: 16px;
+        }
+
+        .controls-hint {
+            color: #fff;
+            font-size: 14px;
+            margin-top: 10px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-button">← Back</a>
+
+    <div class="game-container">
+        <h1>🍉 Fruit Merge</h1>
+
+        <div class="hud">
+            <div class="hud-item">
+                <div class="hud-label">SCORE</div>
+                <div class="hud-value" id="score">0</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">BEST</div>
+                <div class="hud-value" id="best">0</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">LEVEL</div>
+                <div class="hud-value" id="level">1</div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+        <div class="next-fruit">
+            Next: <span id="nextFruit">🍒</span>
+        </div>
+
+        <div class="controls-hint">
+            Click to drop fruit | Merge same fruits to level up!
+        </div>
+
+        <div class="game-over" id="gameOver">
+            <h2>Game Over!</h2>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <p>Best Score: <span id="bestScore">0</span></p>
+            <button onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script src="merge.js"></script>
+</body>
+</html>

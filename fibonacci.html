@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fibonacci 2584 - 2048</title>
+    <link rel="stylesheet" href="fibonacci.css">
+</head>
+<body>
+    <a href="index.html" class="back-button">← Back to Library</a>
+
+    <div class="container">
+        <div class="header">
+            <h1>Fibonacci</h1>
+            <div class="scores">
+                <div class="score-container">
+                    <div class="score-label">SCORE</div>
+                    <div id="score" class="score">0</div>
+                </div>
+                <div class="score-container">
+                    <div class="score-label">BEST</div>
+                    <div id="best" class="score">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <p>Fibonacci sequence twist! Merge <strong>consecutive Fibonacci numbers!</strong></p>
+            <p>1+1=2, 1+2=3, 2+3=5, 3+5=8... Reach 2584 to win!</p>
+        </div>
+
+        <button id="new-game" class="new-game-button">New Game</button>
+
+        <div id="game-board" class="game-board">
+            <div class="grid-container">
+                <div class="grid-row">
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                </div>
+                <div class="grid-row">
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                </div>
+                <div class="grid-row">
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                </div>
+                <div class="grid-row">
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                </div>
+            </div>
+            <div id="tile-container" class="tile-container"></div>
+        </div>
+
+        <div id="game-message" class="game-message hidden">
+            <p></p>
+            <button class="retry-button">Try again</button>
+        </div>
+    </div>
+
+    <script src="fibonacci.js"></script>
+</body>
+</html>

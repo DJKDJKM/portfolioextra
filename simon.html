@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simon Says</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .back-button {
+            position: fixed; top: 20px; left: 20px;
+            background: #333; color: #fff;
+            padding: 10px 20px; border-radius: 5px;
+            text-decoration: none; font-weight: bold; z-index: 100;
+        }
+        .game-container { text-align: center; }
+        h1 { color: #fff; font-size: 48px; margin-bottom: 20px; }
+        canvas { border: 5px solid #333; box-shadow: 0 0 50px rgba(0, 0, 0, 0.8); }
+        .hud {
+            color: #fff; font-size: 24px; margin-bottom: 15px;
+            display: flex; justify-content: center; gap: 40px;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-button">← Back</a>
+    <div class="game-container">
+        <h1>🎵 SIMON SAYS</h1>
+        <div class="hud">
+            <div>Level: <span id="level">1</span></div>
+            <div>Best: <span id="best">0</span></div>
+        </div>
+        <canvas id="gameCanvas" width="500" height="500"></canvas>
+        <p style="color: #fff; margin-top: 15px;">Watch the pattern, then repeat it!</p>
+    </div>
+    <script src="simon.js"></script>
+</body>
+</html>

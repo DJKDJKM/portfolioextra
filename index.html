@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Library - Arcade Collection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 72px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 24px;
+            opacity: 0.9;
+        }
+
+        .section-title {
+            color: white;
+            font-size: 36px;
+            margin: 40px 0 20px 0;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .game-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            position: relative;
+        }
+
+        .game-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .game-card .badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .game-card .badge.hot {
+            background: #ff6b6b;
+        }
+
+        .game-card .badge.action {
+            background: #ee5a6f;
+        }
+
+        .game-card .badge.puzzle {
+            background: #4ecdc4;
+        }
+
+        .game-icon {
+            font-size: 80px;
+            margin-bottom: 15px;
+        }
+
+        .game-card h2 {
+            font-size: 28px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .game-card p {
+            font-size: 15px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .game-type {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 5px 15px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .game-type.merge { background: #d4edda; color: #155724; }
+        .game-type.runner { background: #fff3cd; color: #856404; }
+        .game-type.shooter { background: #f8d7da; color: #721c24; }
+        .game-type.classic { background: #d1ecf1; color: #0c5460; }
+        .game-type.arcade { background: #e2d4f7; color: #4a148c; }
+
+        .footer {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            opacity: 0.8;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 48px;
+            }
+
+            .header p {
+                font-size: 18px;
+            }
+
+            .section-title {
+                font-size: 28px;
+            }
+
+            .games-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 Arcade Game Library</h1>
+            <p>Classic games, modern fun - Pick your adventure!</p>
+        </div>
+
+        <h2 class="section-title">🔥 Action & Arcade</h2>
+        <div class="games-grid">
+            <a href="shooter.html" class="game-card">
+                <span class="badge action">ACTION</span>
+                <div class="game-icon">🚀</div>
+                <h2>Space Shooter</h2>
+                <p>Blast through waves of enemies! Classic arcade shooter with power-ups.</p>
+                <span class="game-type shooter">Shooter</span>
+            </a>
+
+            <a href="runner.html" class="game-card">
+                <span class="badge hot">HOT</span>
+                <div class="game-icon">🏃</div>
+                <h2>Cosmic Runner</h2>
+                <p>Jump and dodge obstacles in this endless runner. How far can you go?</p>
+                <span class="game-type runner">Endless Runner</span>
+            </a>
+
+            <a href="flappy.html" class="game-card">
+                <span class="badge action">ACTION</span>
+                <div class="game-icon">🐦</div>
+                <h2>Flappy Space</h2>
+                <p>Navigate through pipes! Tap to fly, avoid obstacles. Simple but addictive!</p>
+                <span class="game-type arcade">Arcade</span>
+            </a>
+
+            <a href="breakout.html" class="game-card">
+                <span class="badge action">ACTION</span>
+                <div class="game-icon">🧱</div>
+                <h2>Breakout</h2>
+                <p>Break all the bricks! Paddle, ball, and power-ups in this classic arcade game!</p>
+                <span class="game-type arcade">Arcade</span>
+            </a>
+
+            <a href="pong.html" class="game-card">
+                <span class="badge action">ACTION</span>
+                <div class="game-icon">🏓</div>
+                <h2>Pong</h2>
+                <p>The original! Retro table tennis action. First to score wins!</p>
+                <span class="game-type classic">Classic</span>
+            </a>
+
+            <a href="platformer.html" class="game-card">
+                <span class="badge hot">HOT</span>
+                <div class="game-icon">🏃‍♂️</div>
+                <h2>Jump Quest</h2>
+                <p>Jump and run through platforms! Collect coins and reach the flag!</p>
+                <span class="game-type arcade">Platformer</span>
+            </a>
+
+            <a href="asteroids.html" class="game-card">
+                <span class="badge action">ACTION</span>
+                <div class="game-icon">💫</div>
+                <h2>Asteroids</h2>
+                <p>Destroy asteroids and survive! Rotate, thrust, and shoot in zero gravity!</p>
+                <span class="game-type shooter">Shooter</span>
+            </a>
+
+            <a href="invaders.html" class="game-card">
+                <span class="badge hot">HOT</span>
+                <div class="game-icon">👾</div>
+                <h2>Space Invaders</h2>
+                <p>Defend Earth from alien invasion! Classic arcade shooter with shields!</p>
+                <span class="game-type shooter">Shooter</span>
+            </a>
+
+            <a href="missile.html" class="game-card">
+                <span class="badge action">ACTION</span>
+                <div class="game-icon">🚀</div>
+                <h2>Missile Command</h2>
+                <p>Protect your cities from missiles! Click to shoot interceptors!</p>
+                <span class="game-type shooter">Shooter</span>
+            </a>
+
+            <a href="pacman.html" class="game-card">
+                <span class="badge hot">HOT</span>
+                <div class="game-icon">👻</div>
+                <h2>Pac Maze</h2>
+                <p>Collect dots and avoid ghosts! The legendary maze chase game!</p>
+                <span class="game-type classic">Classic</span>
+            </a>
+
+            <a href="whack.html" class="game-card">
+                <span class="badge action">ACTION</span>
+                <div class="game-icon">🔨</div>
+                <h2>Whack-a-Mole</h2>
+                <p>Whack the moles before time runs out! Build combos for massive scores!</p>
+                <span class="game-type arcade">Arcade</span>
+            </a>
+
+            <a href="tanks.html" class="game-card">
+                <span class="badge action">ACTION</span>
+                <div class="game-icon">🪖</div>
+                <h2>Tank Battle</h2>
+                <p>Command your tank in intense battles! Destroy enemy tanks and obstacles!</p>
+                <span class="game-type shooter">Shooter</span>
+            </a>
+
+            <a href="galaga.html" class="game-card">
+                <span class="badge hot">HOT</span>
+                <div class="game-icon">👽</div>
+                <h2>Galactic Shooter</h2>
+                <p>Wave-based space combat! Enemies dive and attack in formations!</p>
+                <span class="game-type shooter">Shooter</span>
+            </a>
+
+            <a href="defender.html" class="game-card">
+                <span class="badge action">ACTION</span>
+                <div class="game-icon">✈️</div>
+                <h2>Sky Defender</h2>
+                <p>Side-scrolling shooter action! Defend the skies from enemy aircraft!</p>
+                <span class="game-type shooter">Shooter</span>
+            </a>
+
+            <a href="arkanoid.html" class="game-card">
+                <span class="badge hot">HOT</span>
+                <div class="game-icon">🎮</div>
+                <h2>Arkanoid Deluxe</h2>
+                <p>Enhanced brick breaker with power-ups! Multi-ball action and special abilities!</p>
+                <span class="game-type arcade">Arcade</span>
+            </a>
+        </div>
+
+        <h2 class="section-title">🧩 Puzzle & Strategy</h2>
+        <div class="games-grid">
+            <a href="tetris.html" class="game-card">
+                <span class="badge hot">HOT</span>
+                <div class="game-icon">🟦</div>
+                <h2>Tetris</h2>
+                <p>The legendary block-stacking puzzle! Clear lines, level up, and beat your high score!</p>
+                <span class="game-type classic">Classic</span>
+            </a>
+
+            <a href="match3.html" class="game-card">
+                <span class="badge puzzle">PUZZLE</span>
+                <div class="game-icon">💎</div>
+                <h2>Gem Crush</h2>
+                <p>Match 3 or more gems to crush them! Create combos for massive scores!</p>
+                <span class="game-type arcade">Match-3</span>
+            </a>
+
+            <a href="memory.html" class="game-card">
+                <span class="badge puzzle">PUZZLE</span>
+                <div class="game-icon">🃏</div>
+                <h2>Memory Cards</h2>
+                <p>Flip cards and find matching pairs! Test your memory skills!</p>
+                <span class="game-type classic">Memory</span>
+            </a>
+
+            <a href="merge.html" class="game-card">
+                <div class="game-icon">🍉</div>
+                <h2>Fruit Merge</h2>
+                <p>Drop and merge fruits! Combine same fruits to create bigger ones. Can you make a watermelon?</p>
+                <span class="game-type merge">Merge</span>
+            </a>
+
+            <a href="snake.html" class="game-card">
+                <div class="game-icon">🐍</div>
+                <h2>Classic Snake</h2>
+                <p>Eat apples, grow longer, don't hit yourself! The timeless classic.</p>
+                <span class="game-type classic">Classic</span>
+            </a>
+
+            <a href="classic.html" class="game-card">
+                <div class="game-icon">🎯</div>
+                <h2>2048</h2>
+                <p>Slide and merge numbers to reach 2048. The viral puzzle phenomenon!</p>
+                <span class="game-type classic">Classic</span>
+            </a>
+
+            <a href="minesweeper.html" class="game-card">
+                <span class="badge puzzle">PUZZLE</span>
+                <div class="game-icon">💣</div>
+                <h2>Minesweeper</h2>
+                <p>Find all the mines without triggering them! Use logic and deduction!</p>
+                <span class="game-type classic">Classic</span>
+            </a>
+
+            <a href="bubbles.html" class="game-card">
+                <span class="badge hot">HOT</span>
+                <div class="game-icon">🫧</div>
+                <h2>Bubble Shooter</h2>
+                <p>Match and pop bubbles! Aim carefully to clear the board!</p>
+                <span class="game-type arcade">Shooter</span>
+            </a>
+
+            <a href="simon.html" class="game-card">
+                <span class="badge puzzle">PUZZLE</span>
+                <div class="game-icon">🎵</div>
+                <h2>Simon Says</h2>
+                <p>Memorize and repeat the pattern! How long can you last?</p>
+                <span class="game-type classic">Memory</span>
+            </a>
+
+            <a href="slide.html" class="game-card">
+                <span class="badge puzzle">PUZZLE</span>
+                <div class="game-icon">🧩</div>
+                <h2>Sliding Puzzle</h2>
+                <p>Slide tiles to arrange them in order! Multiple difficulty levels!</p>
+                <span class="game-type classic">Puzzle</span>
+            </a>
+
+            <a href="sudoku.html" class="game-card">
+                <span class="badge hot">HOT</span>
+                <div class="game-icon">🔢</div>
+                <h2>Sudoku</h2>
+                <p>Fill the grid with numbers! Classic logic puzzle with multiple difficulties!</p>
+                <span class="game-type classic">Puzzle</span>
+            </a>
+
+            <a href="connect4.html" class="game-card">
+                <span class="badge puzzle">PUZZLE</span>
+                <div class="game-icon">🔴</div>
+                <h2>Connect Four</h2>
+                <p>Strategic disc-dropping game! Connect 4 in a row to win! Play vs AI!</p>
+                <span class="game-type classic">Classic</span>
+            </a>
+
+            <a href="tictactoe.html" class="game-card">
+                <span class="badge puzzle">PUZZLE</span>
+                <div class="game-icon">⭕</div>
+                <h2>Tic Tac Toe</h2>
+                <p>Classic X and O game! Challenging AI opponent with minimax algorithm!</p>
+                <span class="game-type classic">Classic</span>
+            </a>
+
+            <a href="wordsearch.html" class="game-card">
+                <span class="badge hot">HOT</span>
+                <div class="game-icon">🔍</div>
+                <h2>Word Search</h2>
+                <p>Find hidden words in the grid! Drag to select, find them all!</p>
+                <span class="game-type classic">Puzzle</span>
+            </a>
+
+            <a href="colormatch.html" class="game-card">
+                <span class="badge puzzle">PUZZLE</span>
+                <div class="game-icon">🎨</div>
+                <h2>Color Match</h2>
+                <p>Match 3+ tiles of the same color! Strategic swapping puzzle action!</p>
+                <span class="game-type arcade">Match-3</span>
+            </a>
+        </div>
+
+
+        <h2 class="section-title">🌟 2048 Variations</h2>
+        <div class="games-grid">
+            <a href="fibonacci.html" class="game-card">
+                <div class="game-icon">🌀</div>
+                <h2>Fibonacci 2584</h2>
+                <p>2048 with Fibonacci twist - merge consecutive numbers!</p>
+                <span class="game-type classic">Puzzle</span>
+            </a>
+
+            <a href="timeattack.html" class="game-card">
+                <div class="game-icon">⏱️</div>
+                <h2>Time Attack</h2>
+                <p>2048 against the clock - 2 minutes to get the highest score!</p>
+                <span class="game-type classic">Puzzle</span>
+            </a>
+
+            <a href="speed3x3.html" class="game-card">
+                <div class="game-icon">⚡</div>
+                <h2>Speed 3x3</h2>
+                <p>Quick 2048 on a smaller grid!</p>
+                <span class="game-type classic">Puzzle</span>
+            </a>
+        </div>
+
+        <div class="footer">
+            <p>All games playable in your browser. No downloads needed!</p>
+        </div>
+    </div>
+</body>
+</html>

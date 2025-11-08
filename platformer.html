@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jump Quest</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(180deg, #74ebd5 0%, #ACB6E5 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .back-button {
+            position: fixed; top: 20px; left: 20px;
+            background: #f093fb; color: #fff;
+            padding: 10px 20px; border-radius: 5px;
+            text-decoration: none; font-weight: bold; z-index: 100;
+        }
+        .game-container { text-align: center; }
+        h1 { color: #fff; font-size: 48px; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        canvas { border: 3px solid #f093fb; box-shadow: 0 0 30px rgba(240, 147, 251, 0.5); }
+        .hud {
+            color: #fff; font-size: 24px; margin-bottom: 15px;
+            display: flex; justify-content: center; gap: 40px;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-button">← Back</a>
+    <div class="game-container">
+        <h1>🏃‍♂️ JUMP QUEST</h1>
+        <div class="hud">
+            <div>Dimension: <span id="dimension">1/20</span></div>
+            <div>Coins: <span id="coins">0</span></div>
+            <div>Lives: <span id="lives">5</span></div>
+        </div>
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        <p style="color: #fff; margin-top: 15px;">Arrow Keys: Move & Jump | Collect coins & reach the flag!</p>
+    </div>
+    <script src="platformer.js"></script>
+</body>
+</html>
