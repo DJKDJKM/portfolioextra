@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moto Rush - Bike Racing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial Black', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #gameCanvas {
+            background: #1a1a1a;
+            box-shadow: 0 0 50px rgba(255, 69, 0, 0.5);
+            border-radius: 10px;
+        }
+
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 600px;
+            pointer-events: none;
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            color: white;
+            font-size: 24px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+
+        .hud-item {
+            background: rgba(255, 69, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 69, 0, 0.6);
+        }
+
+        #speedometer {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 120px;
+            height: 120px;
+            background: rgba(0,0,0,0.8);
+            border-radius: 50%;
+            border: 5px solid #FF4500;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        #speedValue {
+            font-size: 48px;
+            font-weight: bold;
+            color: #FF4500;
+        }
+
+        #speedLabel {
+            font-size: 14px;
+        }
+
+        #startScreen, #gameOver {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+        }
+
+        #gameOver {
+            display: none;
+        }
+
+        h1 {
+            font-size: 64px;
+            background: linear-gradient(45deg, #FF4500, #FFD700);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+        }
+
+        button {
+            padding: 20px 50px;
+            font-size: 28px;
+            background: linear-gradient(45deg, #FF4500, #FF6347);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(255,69,0,0.4);
+        }
+
+        button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(255,69,0,0.6);
+        }
+
+        .instructions {
+            margin-top: 30px;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .key {
+            background: rgba(255,69,0,0.5);
+            padding: 8px 20px;
+            border-radius: 8px;
+            margin: 0 5px;
+            font-weight: bold;
+        }
+
+        #finalStats {
+            color: white;
+            font-size: 24px;
+            margin: 20px 0;
+        }
+
+        #nitroBar {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 200px;
+            height: 30px;
+            background: rgba(0,0,0,0.8);
+            border-radius: 15px;
+            border: 3px solid #00CED1;
+            overflow: hidden;
+        }
+
+        #nitroFill {
+            height: 100%;
+            background: linear-gradient(90deg, #00CED1, #1E90FF);
+            width: 100%;
+            transition: width 0.3s;
+        }
+
+        #nitroText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <div id="ui">
+        <div id="hud">
+            <div class="hud-item">SCORE: <span id="score">0</span></div>
+            <div class="hud-item">DISTANCE: <span id="distance">0</span>m</div>
+        </div>
+
+        <div id="speedometer">
+            <div id="speedValue">0</div>
+            <div id="speedLabel">KM/H</div>
+        </div>
+
+        <div id="nitroBar">
+            <div id="nitroFill"></div>
+            <div id="nitroText">NITRO</div>
+        </div>
+
+        <div id="startScreen">
+            <h1>🏍️ MOTO RUSH</h1>
+            <button onclick="startGame()">START RACE</button>
+            <div class="instructions">
+                <div style="margin: 20px 0;">
+                    <span class="key">↑</span> Accelerate &nbsp;
+                    <span class="key">←</span> <span class="key">→</span> Steer &nbsp;
+                    <span class="key">SPACE</span> Nitro Boost
+                </div>
+                <div>Weave through traffic and collect power-ups!</div>
+            </div>
+        </div>
+
+        <div id="gameOver">
+            <h1>RACE OVER!</h1>
+            <div id="finalStats"></div>
+            <button onclick="restartGame()">RACE AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const game = {
+            running: false,
+            score: 0,
+            distance: 0,
+            speed: 0,
+            maxSpeed: 400,
+            acceleration: 200,
+            friction: 50,
+            player: {
+                x: 400,
+                y: 450,
+                width: 40,
+                height: 80,
+                rotation: 0,
+                targetRotation: 0
+            },
+            traffic: [],
+            obstacles: [],
+            powerups: [],
+            particles: [],
+            roadOffset: 0,
+            roadLines: [],
+            nitro: 100,
+            nitroActive: false,
+            keys: {}
+        };
+
+        const bikeColors = ['#FF0000', '#0000FF', '#00FF00', '#FFFF00', '#FF00FF'];
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            game.running = true;
+            game.score = 0;
+            game.distance = 0;
+            game.speed = 100;
+            game.traffic = [];
+            game.obstacles = [];
+            game.powerups = [];
+            game.particles = [];
+            game.nitro = 100;
+            game.player.x = 400;
+            game.player.y = 450;
+
+            // Initialize road lines
+            for (let i = 0; i < 10; i++) {
+                game.roadLines.push({ y: i * 100 - 500 });
+            }
+
+            gameLoop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            startGame();
+        }
+
+        // Controls
+        document.addEventListener('keydown', e => {
+            game.keys[e.key] = true;
+
+            if (e.key === ' ' && game.nitro > 0 && game.running) {
+                game.nitroActive = true;
+            }
+        });
+
+        document.addEventListener('keyup', e => {
+            game.keys[e.key] = false;
+
+            if (e.key === ' ') {
+                game.nitroActive = false;
+            }
+        });
+
+        // Spawn traffic
+        function spawnTraffic() {
+            const lanes = [250, 400, 550];
+            const lane = lanes[Math.floor(Math.random() * lanes.length)];
+
+            game.traffic.push({
+                x: lane,
+                y: -100,
+                width: 40,
+                height: 70,
+                speed: 50 + Math.random() * 100,
+                color: bikeColors[Math.floor(Math.random() * bikeColors.length)]
+            });
+        }
+
+        // Spawn powerup
+        function spawnPowerup() {
+            const lanes = [250, 400, 550];
+            const lane = lanes[Math.floor(Math.random() * lanes.length)];
+
+            game.powerups.push({
+                x: lane,
+                y: -50,
+                size: 25,
+                type: Math.random() > 0.5 ? 'nitro' : 'shield',
+                rotation: 0
+            });
+        }
+
+        function update(dt) {
+            if (!game.running) return;
+
+            // Player acceleration
+            if (game.keys['ArrowUp']) {
+                game.speed = Math.min(game.maxSpeed, game.speed + game.acceleration * dt);
+            } else {
+                game.speed = Math.max(50, game.speed - game.friction * dt);
+            }
+
+            // Nitro boost
+            if (game.nitroActive && game.nitro > 0) {
+                game.speed = Math.min(game.maxSpeed * 1.5, game.speed + game.acceleration * dt * 2);
+                game.nitro -= dt * 50;
+                createNitroParticles();
+            } else {
+                game.nitro = Math.min(100, game.nitro + dt * 10);
+            }
+
+            // Steering
+            if (game.keys['ArrowLeft']) {
+                game.player.x -= 300 * dt;
+                game.player.targetRotation = -0.2;
+            } else if (game.keys['ArrowRight']) {
+                game.player.x += 300 * dt;
+                game.player.targetRotation = 0.2;
+            } else {
+                game.player.targetRotation = 0;
+            }
+
+            game.player.rotation += (game.player.targetRotation - game.player.rotation) * 0.1;
+
+            // Keep player on road
+            game.player.x = Math.max(200, Math.min(600, game.player.x));
+
+            // Update score and distance
+            game.score += Math.floor(game.speed * dt * 0.1);
+            game.distance += Math.floor(game.speed * dt * 0.05);
+
+            // Road animation
+            game.roadOffset += game.speed * dt;
+            game.roadLines.forEach(line => {
+                line.y += game.speed * dt;
+                if (line.y > 600) {
+                    line.y = -100;
+                }
+            });
+
+            // Update traffic
+            game.traffic.forEach((vehicle, index) => {
+                vehicle.y += (game.speed - vehicle.speed) * dt;
+
+                if (vehicle.y > canvas.height + 100) {
+                    game.traffic.splice(index, 1);
+                    game.score += 50;
+                }
+
+                // Collision
+                if (checkCollision(game.player, vehicle)) {
+                    gameOver();
+                }
+            });
+
+            // Update powerups
+            game.powerups.forEach((powerup, index) => {
+                powerup.y += game.speed * dt;
+                powerup.rotation += dt * 3;
+
+                if (powerup.y > canvas.height) {
+                    game.powerups.splice(index, 1);
+                }
+
+                // Collect
+                const dx = game.player.x - powerup.x;
+                const dy = game.player.y - powerup.y;
+                if (Math.sqrt(dx * dx + dy * dy) < 40) {
+                    if (powerup.type === 'nitro') {
+                        game.nitro = 100;
+                    }
+                    game.score += 200;
+                    game.powerups.splice(index, 1);
+                    createCollectParticles(powerup.x, powerup.y);
+                }
+            });
+
+            // Update particles
+            game.particles.forEach((particle, index) => {
+                particle.life -= dt;
+                particle.x += particle.vx * dt;
+                particle.y += particle.vy * dt;
+                particle.alpha = particle.life / particle.maxLife;
+
+                if (particle.life <= 0) {
+                    game.particles.splice(index, 1);
+                }
+            });
+
+            // Spawn new objects
+            if (Math.random() < 0.02) spawnTraffic();
+            if (Math.random() < 0.005) spawnPowerup();
+
+            updateHUD();
+        }
+
+        function checkCollision(a, b) {
+            return a.x < b.x + b.width - 10 &&
+                   a.x + a.width > b.x + 10 &&
+                   a.y < b.y + b.height - 10 &&
+                   a.y + a.height > b.y + 10;
+        }
+
+        function createNitroParticles() {
+            for (let i = 0; i < 3; i++) {
+                game.particles.push({
+                    x: game.player.x + (Math.random() - 0.5) * 20,
+                    y: game.player.y + game.player.height,
+                    vx: (Math.random() - 0.5) * 50,
+                    vy: 200 + Math.random() * 100,
+                    color: '#00CED1',
+                    life: 0.3,
+                    maxLife: 0.3,
+                    alpha: 1,
+                    size: 5 + Math.random() * 5
+                });
+            }
+        }
+
+        function createCollectParticles(x, y) {
+            for (let i = 0; i < 20; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                game.particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * 150,
+                    vy: Math.sin(angle) * 150,
+                    color: '#FFD700',
+                    life: 0.5,
+                    maxLife: 0.5,
+                    alpha: 1,
+                    size: 3 + Math.random() * 3
+                });
+            }
+        }
+
+        function gameOver() {
+            game.running = false;
+            document.getElementById('gameOver').style.display = 'flex';
+            document.getElementById('finalStats').innerHTML =
+                `Score: ${game.score}<br>Distance: ${game.distance}m<br>Top Speed: ${Math.floor(game.maxSpeed)} km/h`;
+        }
+
+        function updateHUD() {
+            document.getElementById('score').textContent = game.score;
+            document.getElementById('distance').textContent = game.distance;
+            document.getElementById('speedValue').textContent = Math.floor(game.speed);
+            document.getElementById('nitroFill').style.width = game.nitro + '%';
+        }
+
+        function render() {
+            // Road background
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Grass borders
+            ctx.fillStyle = '#2d5016';
+            ctx.fillRect(0, 0, 150, canvas.height);
+            ctx.fillRect(650, 0, 150, canvas.height);
+
+            // Road
+            ctx.fillStyle = '#2a2a2a';
+            ctx.fillRect(150, 0, 500, canvas.height);
+
+            // Road lines
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([30, 30]);
+
+            game.roadLines.forEach(line => {
+                ctx.beginPath();
+                ctx.moveTo(300, line.y);
+                ctx.lineTo(300, line.y + 50);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(500, line.y);
+                ctx.lineTo(500, line.y + 50);
+                ctx.stroke();
+            });
+
+            ctx.setLineDash([]);
+
+            // Road edges
+            ctx.strokeStyle = '#ffff00';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(150, 0);
+            ctx.lineTo(150, canvas.height);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(650, 0);
+            ctx.lineTo(650, canvas.height);
+            ctx.stroke();
+
+            // Particles
+            game.particles.forEach(particle => {
+                ctx.globalAlpha = particle.alpha;
+                ctx.fillStyle = particle.color;
+                ctx.fillRect(particle.x - particle.size / 2, particle.y - particle.size / 2, particle.size, particle.size);
+            });
+            ctx.globalAlpha = 1;
+
+            // Powerups
+            game.powerups.forEach(powerup => {
+                ctx.save();
+                ctx.translate(powerup.x, powerup.y);
+                ctx.rotate(powerup.rotation);
+
+                // Glow
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, powerup.size * 2);
+                gradient.addColorStop(0, powerup.type === 'nitro' ? 'rgba(0,206,209,0.5)' : 'rgba(255,215,0,0.5)');
+                gradient.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(-powerup.size * 2, -powerup.size * 2, powerup.size * 4, powerup.size * 4);
+
+                // Icon
+                ctx.fillStyle = powerup.type === 'nitro' ? '#00CED1' : '#FFD700';
+                ctx.fillRect(-powerup.size / 2, -powerup.size / 2, powerup.size, powerup.size);
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(-powerup.size / 2, -powerup.size / 2, powerup.size, powerup.size);
+
+                ctx.restore();
+            });
+
+            // Traffic
+            game.traffic.forEach(vehicle => {
+                drawBike(vehicle.x, vehicle.y, vehicle.width, vehicle.height, vehicle.color, 0);
+            });
+
+            // Player
+            drawBike(game.player.x, game.player.y, game.player.width, game.player.height, '#FF4500', game.player.rotation);
+        }
+
+        function drawBike(x, y, width, height, color, rotation) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(-width / 2 + 3, -height / 2 + 3, width, height);
+
+            // Bike body
+            ctx.fillStyle = color;
+            ctx.fillRect(-width / 2, -height / 2, width, height);
+
+            // Bike details
+            ctx.fillStyle = darkenColor(color, 40);
+            ctx.fillRect(-width / 2 + 5, -height / 2 + 10, width - 10, 20);
+
+            // Windshield
+            ctx.fillStyle = 'rgba(100, 150, 255, 0.5)';
+            ctx.fillRect(-width / 2 + 8, -height / 2, width - 16, 15);
+
+            // Wheels
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(-width / 2 - 4, -height / 2 + 15, 8, 12);
+            ctx.fillRect(width / 2 - 4, -height / 2 + 15, 8, 12);
+            ctx.fillRect(-width / 2 - 4, height / 2 - 27, 8, 12);
+            ctx.fillRect(width / 2 - 4, height / 2 - 27, 8, 12);
+
+            // Headlight
+            if (rotation === 0 || Math.abs(rotation) < 0.01) {
+                ctx.fillStyle = '#FFFF00';
+                ctx.fillRect(-width / 2 + 15, -height / 2, 10, 4);
+            }
+
+            ctx.restore();
+        }
+
+        function darkenColor(color, amount) {
+            if (color.startsWith('rgb')) return color;
+            const hex = color.replace('#', '');
+            const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - amount);
+            const g = Math.max(0, parseInt(hex.substr(2, 2), 16) - amount);
+            const b = Math.max(0, parseInt(hex.substr(4, 2), 16) - amount);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        // Game loop
+        let lastTime = performance.now();
+
+        function gameLoop() {
+            const currentTime = performance.now();
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>

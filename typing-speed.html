@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Type Master - Speed Typing</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 48px;
+        }
+        #stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        #textDisplay {
+            font-size: 24px;
+            line-height: 1.8;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            min-height: 200px;
+            user-select: none;
+        }
+        .char { color: #999; }
+        .char.correct { color: #4CAF50; }
+        .char.incorrect { color: #f44336; background: #ffebee; }
+        .char.current { border-left: 3px solid #667eea; animation: blink 1s infinite; }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        #inputArea {
+            width: 100%;
+            padding: 20px;
+            font-size: 20px;
+            font-family: 'Courier New', monospace;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            outline: none;
+            resize: none;
+        }
+        #inputArea:focus {
+            box-shadow: 0 0 20px rgba(102,126,234,0.3);
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            font-size: 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+        }
+        #gameOver {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+        #gameOver h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        #gameOver .result {
+            font-size: 24px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⌨️ TYPE MASTER</h1>
+
+        <div id="stats">
+            <div class="stat">
+                <div class="stat-label">WPM</div>
+                <div class="stat-value" id="wpm">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">ACCURACY</div>
+                <div class="stat-value" id="accuracy">100%</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">TIME</div>
+                <div class="stat-value" id="timer">60</div>
+            </div>
+        </div>
+
+        <div id="textDisplay"></div>
+        <textarea id="inputArea" rows="3" placeholder="Click here and start typing..." disabled></textarea>
+        <button onclick="startGame()">START TYPING TEST</button>
+
+        <div id="gameOver">
+            <h2>Test Complete!</h2>
+            <div class="result">WPM: <span id="finalWPM">0</span></div>
+            <div class="result">Accuracy: <span id="finalAccuracy">0</span>%</div>
+            <div class="result">Characters: <span id="finalChars">0</span></div>
+            <button onclick="restartGame()">Try Again</button>
+        </div>
+    </div>
+
+    <script>
+        const texts = [
+            "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. How quickly daft jumping zebras vex.",
+            "Programming is the art of telling another human what one wants the computer to do. Code is like humor. When you have to explain it, it's bad.",
+            "The best way to predict the future is to invent it. Stay hungry, stay foolish. Innovation distinguishes between a leader and a follower.",
+            "Success is not final, failure is not fatal: it is the courage to continue that counts. The only way to do great work is to love what you do."
+        ];
+
+        const game = {
+            running: false,
+            text: '',
+            currentIndex: 0,
+            startTime: 0,
+            timeLimit: 60,
+            timeLeft: 60,
+            correct: 0,
+            incorrect: 0,
+            timer: null
+        };
+
+        function startGame() {
+            game.text = texts[Math.floor(Math.random() * texts.length)];
+            game.currentIndex = 0;
+            game.correct = 0;
+            game.incorrect = 0;
+            game.timeLeft = game.timeLimit;
+            game.running = true;
+            game.startTime = Date.now();
+
+            document.getElementById('inputArea').value = '';
+            document.getElementById('inputArea').disabled = false;
+            document.getElementById('inputArea').focus();
+            document.getElementById('gameOver').style.display = 'none';
+
+            displayText();
+            startTimer();
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        function displayText() {
+            const display = document.getElementById('textDisplay');
+            display.innerHTML = '';
+
+            for (let i = 0; i < game.text.length; i++) {
+                const span = document.createElement('span');
+                span.className = 'char';
+                span.textContent = game.text[i];
+
+                if (i < game.currentIndex) {
+                    span.classList.add(game.text[i] === document.getElementById('inputArea').value[i] ? 'correct' : 'incorrect');
+                } else if (i === game.currentIndex) {
+                    span.classList.add('current');
+                }
+
+                display.appendChild(span);
+            }
+        }
+
+        function startTimer() {
+            game.timer = setInterval(() => {
+                game.timeLeft--;
+                document.getElementById('timer').textContent = game.timeLeft;
+
+                if (game.timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            clearInterval(game.timer);
+            game.running = false;
+            document.getElementById('inputArea').disabled = true;
+
+            const minutes = (Date.now() - game.startTime) / 60000;
+            const words = game.currentIndex / 5;
+            const wpm = Math.floor(words / minutes);
+            const accuracy = Math.floor((game.correct / (game.correct + game.incorrect)) * 100) || 0;
+
+            document.getElementById('finalWPM').textContent = wpm;
+            document.getElementById('finalAccuracy').textContent = accuracy;
+            document.getElementById('finalChars').textContent = game.currentIndex;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        document.getElementById('inputArea').addEventListener('input', (e) => {
+            if (!game.running) return;
+
+            const typed = e.target.value;
+            game.currentIndex = typed.length;
+
+            game.correct = 0;
+            game.incorrect = 0;
+
+            for (let i = 0; i < typed.length; i++) {
+                if (typed[i] === game.text[i]) {
+                    game.correct++;
+                } else {
+                    game.incorrect++;
+                }
+            }
+
+            displayText();
+            updateStats();
+
+            if (typed.length >= game.text.length) {
+                endGame();
+            }
+        });
+
+        function updateStats() {
+            const minutes = (Date.now() - game.startTime) / 60000;
+            const words = game.currentIndex / 5;
+            const wpm = Math.floor(words / minutes);
+            const accuracy = Math.floor((game.correct / (game.correct + game.incorrect)) * 100) || 100;
+
+            document.getElementById('wpm').textContent = wpm || 0;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+        }
+    </script>
+</body>
+</html>
