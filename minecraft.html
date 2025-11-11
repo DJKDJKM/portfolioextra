@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniCraft - Block Building Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: #87CEEB;
+            cursor: crosshair;
+        }
+
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
+
+        #hotbar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            padding: 10px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            pointer-events: all;
+        }
+
+        .hotbar-slot {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(255,255,255,0.5);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            background: rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .hotbar-slot:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.1);
+        }
+
+        .hotbar-slot.selected {
+            border-color: yellow;
+            background: rgba(255,255,0,0.3);
+            box-shadow: 0 0 20px rgba(255,255,0,0.6);
+        }
+
+        .hotbar-count {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 12px;
+            background: rgba(0,0,0,0.8);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        #controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            max-width: 250px;
+        }
+
+        #controls h3 {
+            margin-bottom: 10px;
+            color: #FFD700;
+        }
+
+        #controls div {
+            margin: 5px 0;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+        }
+
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: white;
+        }
+
+        #crosshair::before {
+            width: 2px;
+            height: 20px;
+            left: 9px;
+        }
+
+        #crosshair::after {
+            width: 20px;
+            height: 2px;
+            top: 9px;
+        }
+
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        #craftingMenu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 30px;
+            border-radius: 15px;
+            display: none;
+            pointer-events: all;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        #craftingMenu.visible {
+            display: block;
+        }
+
+        #craftingMenu h2 {
+            color: #FFD700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .recipe {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .recipe:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.05);
+        }
+
+        .recipe-header {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .recipe-details {
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        #startScreen h1 {
+            color: #FFD700;
+            font-size: 48px;
+            margin-bottom: 30px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+
+        #startBtn {
+            padding: 15px 40px;
+            font-size: 24px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+
+        #startBtn:hover {
+            background: #45a049;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="startScreen">
+        <h1>🧱 MiniCraft</h1>
+        <button id="startBtn">Start Game</button>
+    </div>
+
+    <div id="crosshair"></div>
+
+    <div id="info">
+        <div>Position: <span id="position">0, 0, 0</span></div>
+        <div>Looking at: <span id="lookingAt">Air</span></div>
+        <div>Blocks: <span id="blockCount">0</span></div>
+    </div>
+
+    <div id="controls">
+        <h3>Controls</h3>
+        <div><strong>WASD</strong> - Move</div>
+        <div><strong>Space</strong> - Jump</div>
+        <div><strong>Mouse</strong> - Look around</div>
+        <div><strong>Left Click</strong> - Break block</div>
+        <div><strong>Right Click</strong> - Place block</div>
+        <div><strong>1-6</strong> - Select block type</div>
+        <div><strong>E</strong> - Open crafting</div>
+        <div><strong>Shift</strong> - Sneak/Descend</div>
+    </div>
+
+    <div id="hotbar"></div>
+
+    <div id="craftingMenu">
+        <h2>Crafting Menu</h2>
+        <div id="recipes"></div>
+        <button onclick="closeCrafting()" style="margin-top: 20px; padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%;">Close (E)</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Block types with textures
+        const BLOCK_TYPES = {
+            AIR: { id: 0, name: 'Air', icon: '💨', color: null },
+            GRASS: { id: 1, name: 'Grass', icon: '🟩', color: '#7CB342', topColor: '#8BC34A' },
+            DIRT: { id: 2, name: 'Dirt', icon: '🟫', color: '#8D6E63' },
+            STONE: { id: 3, name: 'Stone', icon: '⬜', color: '#78909C' },
+            WOOD: { id: 4, name: 'Wood', icon: '🟨', color: '#A1887F' },
+            LEAVES: { id: 5, name: 'Leaves', icon: '🟢', color: '#66BB6A' },
+            SAND: { id: 6, name: 'Sand', icon: '🟡', color: '#FFD54F' },
+            WATER: { id: 7, name: 'Water', icon: '💧', color: '#42A5F5' },
+            PLANKS: { id: 8, name: 'Planks', icon: '🪵', color: '#BCAAA4' },
+            COBBLESTONE: { id: 9, name: 'Cobblestone', icon: '🔘', color: '#607D8B' }
+        };
+
+        // Game state
+        const game = {
+            world: {},
+            player: {
+                x: 0,
+                y: 20,
+                z: 0,
+                vx: 0,
+                vy: 0,
+                vz: 0,
+                yaw: 0,
+                pitch: 0,
+                onGround: false,
+                selectedBlock: 1
+            },
+            camera: {
+                fov: 60,
+                nearPlane: 0.1,
+                farPlane: 100
+            },
+            keys: {},
+            mouse: { locked: false, dx: 0, dy: 0 },
+            worldSize: { x: 50, y: 30, z: 50 },
+            blockSize: 1,
+            renderDistance: 30,
+            inventory: {
+                1: 999, 2: 999, 3: 999, 4: 999, 5: 999, 6: 999, 8: 0, 9: 0
+            }
+        };
+
+        // Crafting recipes
+        const recipes = [
+            {
+                name: 'Planks',
+                icon: '🪵',
+                result: { type: 8, count: 4 },
+                ingredients: [{ type: 4, count: 1 }],
+                description: '1 Wood → 4 Planks'
+            },
+            {
+                name: 'Cobblestone',
+                icon: '🔘',
+                result: { type: 9, count: 1 },
+                ingredients: [{ type: 3, count: 1 }],
+                description: '1 Stone → 1 Cobblestone'
+            }
+        ];
+
+        // Initialize game
+        function init() {
+            generateWorld();
+            createHotbar();
+            createRecipes();
+            setupEventListeners();
+            gameLoop();
+        }
+
+        function generateWorld() {
+            const noise = (x, z) => {
+                let value = 0;
+                let scale = 0.05;
+                let amplitude = 10;
+
+                for (let i = 0; i < 3; i++) {
+                    value += Math.sin(x * scale) * Math.cos(z * scale) * amplitude;
+                    scale *= 2;
+                    amplitude *= 0.5;
+                }
+
+                return value;
+            };
+
+            for (let x = -game.worldSize.x; x < game.worldSize.x; x++) {
+                for (let z = -game.worldSize.z; z < game.worldSize.z; z++) {
+                    const height = Math.floor(10 + noise(x, z));
+
+                    for (let y = 0; y <= height; y++) {
+                        let blockType;
+                        if (y === height && y > 8) {
+                            blockType = BLOCK_TYPES.GRASS.id;
+                        } else if (y > height - 3 && y > 5) {
+                            blockType = BLOCK_TYPES.DIRT.id;
+                        } else if (y <= 8 && Math.random() > 0.7) {
+                            blockType = BLOCK_TYPES.SAND.id;
+                        } else {
+                            blockType = BLOCK_TYPES.STONE.id;
+                        }
+                        setBlock(x, y, z, blockType);
+                    }
+
+                    // Generate trees
+                    if (height > 10 && Math.random() > 0.97) {
+                        generateTree(x, height + 1, z);
+                    }
+                }
+            }
+        }
+
+        function generateTree(x, y, z) {
+            // Trunk
+            for (let i = 0; i < 5; i++) {
+                setBlock(x, y + i, z, BLOCK_TYPES.WOOD.id);
+            }
+            // Leaves
+            for (let dx = -2; dx <= 2; dx++) {
+                for (let dz = -2; dz <= 2; dz++) {
+                    for (let dy = 3; dy <= 6; dy++) {
+                        if (Math.abs(dx) + Math.abs(dz) + Math.abs(dy - 4) < 4) {
+                            setBlock(x + dx, y + dy, z + dz, BLOCK_TYPES.LEAVES.id);
+                        }
+                    }
+                }
+            }
+        }
+
+        function setBlock(x, y, z, type) {
+            const key = `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
+            if (type === BLOCK_TYPES.AIR.id) {
+                delete game.world[key];
+            } else {
+                game.world[key] = type;
+            }
+        }
+
+        function getBlock(x, y, z) {
+            const key = `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
+            return game.world[key] || BLOCK_TYPES.AIR.id;
+        }
+
+        function createHotbar() {
+            const hotbar = document.getElementById('hotbar');
+            const blockTypes = [1, 2, 3, 4, 5, 6];
+
+            blockTypes.forEach((typeId, index) => {
+                const block = Object.values(BLOCK_TYPES).find(b => b.id === typeId);
+                const slot = document.createElement('div');
+                slot.className = 'hotbar-slot';
+                if (index === 0) slot.classList.add('selected');
+                slot.innerHTML = `${block.icon}<span class="hotbar-count">${game.inventory[typeId] || 0}</span>`;
+                slot.onclick = () => selectSlot(index);
+                hotbar.appendChild(slot);
+            });
+        }
+
+        function selectSlot(index) {
+            const slots = document.querySelectorAll('.hotbar-slot');
+            slots.forEach(s => s.classList.remove('selected'));
+            slots[index].classList.add('selected');
+            game.player.selectedBlock = [1, 2, 3, 4, 5, 6][index];
+        }
+
+        function updateHotbar() {
+            const slots = document.querySelectorAll('.hotbar-slot');
+            [1, 2, 3, 4, 5, 6].forEach((typeId, index) => {
+                const count = slots[index].querySelector('.hotbar-count');
+                count.textContent = game.inventory[typeId] || 0;
+            });
+        }
+
+        function createRecipes() {
+            const recipesDiv = document.getElementById('recipes');
+            recipes.forEach(recipe => {
+                const div = document.createElement('div');
+                div.className = 'recipe';
+                div.innerHTML = `
+                    <div class="recipe-header">${recipe.icon} ${recipe.name}</div>
+                    <div class="recipe-details">${recipe.description}</div>
+                `;
+                div.onclick = () => craft(recipe);
+                recipesDiv.appendChild(div);
+            });
+        }
+
+        function craft(recipe) {
+            // Check if player has ingredients
+            const canCraft = recipe.ingredients.every(ing =>
+                (game.inventory[ing.type] || 0) >= ing.count
+            );
+
+            if (!canCraft) {
+                return;
+            }
+
+            // Consume ingredients
+            recipe.ingredients.forEach(ing => {
+                game.inventory[ing.type] -= ing.count;
+            });
+
+            // Add result
+            game.inventory[recipe.result.type] = (game.inventory[recipe.result.type] || 0) + recipe.result.count;
+
+            updateHotbar();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('startBtn').addEventListener('click', () => {
+                document.getElementById('startScreen').style.display = 'none';
+                canvas.requestPointerLock();
+            });
+
+            document.addEventListener('keydown', e => {
+                game.keys[e.key.toLowerCase()] = true;
+
+                if (e.key >= '1' && e.key <= '6') {
+                    selectSlot(parseInt(e.key) - 1);
+                }
+
+                if (e.key.toLowerCase() === 'e') {
+                    const menu = document.getElementById('craftingMenu');
+                    menu.classList.toggle('visible');
+                }
+            });
+
+            document.addEventListener('keyup', e => {
+                game.keys[e.key.toLowerCase()] = false;
+            });
+
+            canvas.addEventListener('click', () => {
+                if (!document.pointerLockElement) {
+                    canvas.requestPointerLock();
+                }
+            });
+
+            document.addEventListener('pointerlockchange', () => {
+                game.mouse.locked = document.pointerLockElement === canvas;
+            });
+
+            document.addEventListener('mousemove', e => {
+                if (game.mouse.locked) {
+                    game.player.yaw -= e.movementX * 0.002;
+                    game.player.pitch -= e.movementY * 0.002;
+                    game.player.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, game.player.pitch));
+                }
+            });
+
+            canvas.addEventListener('mousedown', e => {
+                if (!game.mouse.locked) return;
+
+                if (e.button === 0) { // Left click - break block
+                    const target = raycast();
+                    if (target) {
+                        const blockType = getBlock(target.x, target.y, target.z);
+                        if (blockType !== BLOCK_TYPES.AIR.id) {
+                            setBlock(target.x, target.y, target.z, BLOCK_TYPES.AIR.id);
+                            game.inventory[blockType] = (game.inventory[blockType] || 0) + 1;
+                            updateHotbar();
+                        }
+                    }
+                } else if (e.button === 2) { // Right click - place block
+                    const target = raycast();
+                    if (target && target.adjacent) {
+                        const { ax, ay, az } = target;
+                        const playerBlock = {
+                            x: Math.floor(game.player.x),
+                            y: Math.floor(game.player.y),
+                            z: Math.floor(game.player.z)
+                        };
+
+                        // Don't place block where player is
+                        if (!(ax === playerBlock.x && ay === playerBlock.y && az === playerBlock.z) &&
+                            !(ax === playerBlock.x && ay === playerBlock.y - 1 && az === playerBlock.z)) {
+                            if ((game.inventory[game.player.selectedBlock] || 0) > 0) {
+                                setBlock(ax, ay, az, game.player.selectedBlock);
+                                game.inventory[game.player.selectedBlock]--;
+                                updateHotbar();
+                            }
+                        }
+                    }
+                }
+            });
+
+            canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+        }
+
+        function raycast() {
+            const maxDistance = 5;
+            const step = 0.1;
+
+            const dirX = Math.cos(game.player.yaw) * Math.cos(game.player.pitch);
+            const dirY = Math.sin(game.player.pitch);
+            const dirZ = Math.sin(game.player.yaw) * Math.cos(game.player.pitch);
+
+            let lastAir = null;
+
+            for (let d = 0; d < maxDistance; d += step) {
+                const x = game.player.x + dirX * d;
+                const y = game.player.y + 1.6 + dirY * d; // Eye level
+                const z = game.player.z + dirZ * d;
+
+                const block = getBlock(x, y, z);
+
+                if (block !== BLOCK_TYPES.AIR.id) {
+                    const result = {
+                        x: Math.floor(x),
+                        y: Math.floor(y),
+                        z: Math.floor(z)
+                    };
+
+                    if (lastAir) {
+                        result.adjacent = true;
+                        result.ax = lastAir.x;
+                        result.ay = lastAir.y;
+                        result.az = lastAir.z;
+                    }
+
+                    return result;
+                }
+
+                lastAir = {
+                    x: Math.floor(x),
+                    y: Math.floor(y),
+                    z: Math.floor(z)
+                };
+            }
+
+            return null;
+        }
+
+        function updatePlayer(dt) {
+            const speed = game.keys['shift'] ? 3 : 6;
+            const jumpSpeed = 8;
+
+            // Movement
+            let moveX = 0, moveZ = 0;
+
+            if (game.keys['w']) {
+                moveX += Math.cos(game.player.yaw);
+                moveZ += Math.sin(game.player.yaw);
+            }
+            if (game.keys['s']) {
+                moveX -= Math.cos(game.player.yaw);
+                moveZ -= Math.sin(game.player.yaw);
+            }
+            if (game.keys['a']) {
+                moveX += Math.cos(game.player.yaw - Math.PI / 2);
+                moveZ += Math.sin(game.player.yaw - Math.PI / 2);
+            }
+            if (game.keys['d']) {
+                moveX += Math.cos(game.player.yaw + Math.PI / 2);
+                moveZ += Math.sin(game.player.yaw + Math.PI / 2);
+            }
+
+            const moveLen = Math.sqrt(moveX * moveX + moveZ * moveZ);
+            if (moveLen > 0) {
+                moveX = (moveX / moveLen) * speed * dt;
+                moveZ = (moveZ / moveLen) * speed * dt;
+            }
+
+            game.player.vx = moveX;
+            game.player.vz = moveZ;
+
+            // Jumping and flying
+            if (game.keys[' ']) {
+                if (game.player.onGround) {
+                    game.player.vy = jumpSpeed;
+                } else {
+                    game.player.vy = 5; // Creative flying up
+                }
+            } else if (game.keys['shift']) {
+                game.player.vy = -5; // Creative flying down
+            } else {
+                // Gravity
+                game.player.vy -= 25 * dt;
+            }
+
+            // Apply velocity
+            game.player.x += game.player.vx;
+            game.player.z += game.player.vz;
+            game.player.y += game.player.vy * dt;
+
+            // Simple collision detection
+            game.player.onGround = false;
+
+            // Check ground
+            if (getBlock(game.player.x, game.player.y - 0.1, game.player.z) !== BLOCK_TYPES.AIR.id) {
+                game.player.y = Math.ceil(game.player.y);
+                game.player.vy = 0;
+                game.player.onGround = true;
+            }
+
+            // Prevent falling through world
+            if (game.player.y < 0) {
+                game.player.y = 20;
+                game.player.vy = 0;
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Sky gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#E0F6FF');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Get visible blocks
+            const visibleBlocks = [];
+            const px = Math.floor(game.player.x);
+            const py = Math.floor(game.player.y);
+            const pz = Math.floor(game.player.z);
+
+            for (let x = px - game.renderDistance; x <= px + game.renderDistance; x++) {
+                for (let z = pz - game.renderDistance; z <= pz + game.renderDistance; z++) {
+                    for (let y = Math.max(0, py - 15); y <= Math.min(game.worldSize.y, py + 15); y++) {
+                        const block = getBlock(x, y, z);
+                        if (block !== BLOCK_TYPES.AIR.id) {
+                            visibleBlocks.push({ x, y, z, type: block });
+                        }
+                    }
+                }
+            }
+
+            // Sort blocks by distance
+            visibleBlocks.sort((a, b) => {
+                const distA = (a.x - game.player.x) ** 2 + (a.y - game.player.y) ** 2 + (a.z - game.player.z) ** 2;
+                const distB = (b.x - game.player.x) ** 2 + (b.y - game.player.y) ** 2 + (b.z - game.player.z) ** 2;
+                return distB - distA;
+            });
+
+            // Render blocks
+            visibleBlocks.forEach(block => {
+                renderBlock(block.x, block.y, block.z, block.type);
+            });
+
+            // Update UI
+            updateUI();
+        }
+
+        function renderBlock(x, y, z, type) {
+            const blockType = Object.values(BLOCK_TYPES).find(b => b.id === type);
+            if (!blockType || !blockType.color) return;
+
+            // Transform world coordinates to screen coordinates
+            const dx = x - game.player.x;
+            const dy = y - game.player.y;
+            const dz = z - game.player.z;
+
+            // Rotate around player
+            const cosYaw = Math.cos(-game.player.yaw);
+            const sinYaw = Math.sin(-game.player.yaw);
+            const cosPitch = Math.cos(-game.player.pitch);
+            const sinPitch = Math.sin(-game.player.pitch);
+
+            let rx = dx * cosYaw - dz * sinYaw;
+            let rz = dx * sinYaw + dz * cosYaw;
+            let ry = dy;
+
+            const tempY = ry * cosPitch - rz * sinPitch;
+            rz = ry * sinPitch + rz * cosPitch;
+            ry = tempY;
+
+            if (rz < 0.1) return; // Behind camera
+
+            // Project to screen
+            const scale = (canvas.width / 2) / rz;
+            const screenX = canvas.width / 2 + rx * scale;
+            const screenY = canvas.height / 2 - ry * scale;
+            const size = scale * game.blockSize;
+
+            if (size < 1) return; // Too small
+
+            // Draw block with shading based on face direction
+            ctx.save();
+
+            // Top face (lighter)
+            if (getBlock(x, y + 1, z) === BLOCK_TYPES.AIR.id) {
+                ctx.fillStyle = blockType.topColor || lightenColor(blockType.color, 20);
+                ctx.fillRect(screenX - size / 2, screenY - size / 2 - size * 0.3, size, size * 0.3);
+            }
+
+            // Front face
+            ctx.fillStyle = blockType.color;
+            ctx.fillRect(screenX - size / 2, screenY - size / 2, size, size);
+
+            // Side face (darker)
+            if (getBlock(x + 1, y, z) === BLOCK_TYPES.AIR.id || getBlock(x - 1, y, z) === BLOCK_TYPES.AIR.id) {
+                ctx.fillStyle = darkenColor(blockType.color, 20);
+                ctx.fillRect(screenX - size / 2, screenY - size / 2, size * 0.2, size);
+            }
+
+            // Outline
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+            ctx.lineWidth = Math.max(1, size * 0.02);
+            ctx.strokeRect(screenX - size / 2, screenY - size / 2, size, size);
+
+            ctx.restore();
+        }
+
+        function lightenColor(color, percent) {
+            const num = parseInt(color.replace('#', ''), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.min(255, (num >> 16) + amt);
+            const G = Math.min(255, (num >> 8 & 0x00FF) + amt);
+            const B = Math.min(255, (num & 0x0000FF) + amt);
+            return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1)}`;
+        }
+
+        function darkenColor(color, percent) {
+            const num = parseInt(color.replace('#', ''), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.max(0, (num >> 16) - amt);
+            const G = Math.max(0, (num >> 8 & 0x00FF) - amt);
+            const B = Math.max(0, (num & 0x0000FF) - amt);
+            return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1)}`;
+        }
+
+        function updateUI() {
+            const pos = document.getElementById('position');
+            pos.textContent = `${Math.floor(game.player.x)}, ${Math.floor(game.player.y)}, ${Math.floor(game.player.z)}`;
+
+            const target = raycast();
+            const lookingAt = document.getElementById('lookingAt');
+            if (target) {
+                const block = getBlock(target.x, target.y, target.z);
+                const blockType = Object.values(BLOCK_TYPES).find(b => b.id === block);
+                lookingAt.textContent = blockType ? blockType.name : 'Air';
+            } else {
+                lookingAt.textContent = 'Air';
+            }
+
+            const totalBlocks = Object.values(game.inventory).reduce((a, b) => a + b, 0);
+            document.getElementById('blockCount').textContent = totalBlocks;
+        }
+
+        function closeCrafting() {
+            document.getElementById('craftingMenu').classList.remove('visible');
+        }
+
+        // Game loop
+        let lastTime = performance.now();
+
+        function gameLoop() {
+            const currentTime = performance.now();
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            updatePlayer(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
