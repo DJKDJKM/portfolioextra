@@ -154,6 +154,65 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
+        // Sound System
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const sounds = {
+            shoot: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 150;
+                osc.type = 'square';
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            },
+            hit: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            },
+            explosion: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const filter = audioCtx.createBiquadFilter();
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                filter.type = 'lowpass';
+                filter.frequency.value = 800;
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.5);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.5);
+            },
+            impact: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 80;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            }
+        };
+
         const game = {
             running: false,
             player1: null,
@@ -161,7 +220,10 @@
             bullets: [],
             obstacles: [],
             particles: [],
-            keys: {}
+            keys: {},
+            shakeAmount: 0,
+            damagePopups: [],
+            muzzleFlashes: []
         };
 
         function startGame() {
@@ -235,6 +297,21 @@
             game.keys[e.key] = false;
         });
 
+        function screenShake(amount = 10) {
+            game.shakeAmount = Math.max(game.shakeAmount, amount);
+        }
+
+        function createDamagePopup(text, x, y, color) {
+            game.damagePopups.push({
+                text: text,
+                x: x,
+                y: y,
+                vy: -2,
+                life: 1.0,
+                color: color
+            });
+        }
+
         function shootBullet(player) {
             const now = Date.now();
             if (now - player.lastShot < player.shootCooldown) return;
@@ -242,18 +319,37 @@
             player.lastShot = now;
 
             const bulletSpeed = 10;
+            const bulletX = player.x + Math.cos(player.angle) * 30;
+            const bulletY = player.y + Math.sin(player.angle) * 30;
+
             game.bullets.push({
-                x: player.x + Math.cos(player.angle) * 30,
-                y: player.y + Math.sin(player.angle) * 30,
+                x: bulletX,
+                y: bulletY,
                 vx: Math.cos(player.angle) * bulletSpeed,
                 vy: Math.sin(player.angle) * bulletSpeed,
                 owner: player,
                 radius: 5
             });
+
+            // Muzzle flash
+            game.muzzleFlashes.push({
+                x: bulletX,
+                y: bulletY,
+                angle: player.angle,
+                life: 0.15,
+                size: 25
+            });
+
+            sounds.shoot();
+            screenShake(5);
         }
 
         function update(dt) {
             if (!game.running) return;
+
+            // Screen shake decay
+            game.shakeAmount *= 0.85;
+            if (game.shakeAmount < 0.1) game.shakeAmount = 0;
 
             // Player 1 controls (WASD)
             if (game.keys['w'] || game.keys['W']) {
@@ -331,7 +427,9 @@
                 for (let obs of game.obstacles) {
                     if (bullet.x > obs.x && bullet.x < obs.x + obs.width &&
                         bullet.y > obs.y && bullet.y < obs.y + obs.height) {
-                        createParticles(bullet.x, bullet.y, '#FFD700');
+                        createParticles(bullet.x, bullet.y, '#FFD700', 30);
+                        sounds.impact();
+                        screenShake(3);
                         return false;
                     }
                 }
@@ -345,10 +443,16 @@
 
                         if (dist < 25) {
                             player.health -= 20;
-                            createParticles(bullet.x, bullet.y, player.color);
+                            createParticles(bullet.x, bullet.y, player.color, 40);
+                            createDamagePopup('-20', player.x, player.y - 30, '#ff0000');
+                            sounds.hit();
+                            screenShake(15);
 
                             if (player.health <= 0) {
                                 bullet.owner.kills++;
+                                createParticles(player.x, player.y, player.color, 80);
+                                sounds.explosion();
+                                screenShake(30);
                                 gameOver(bullet.owner);
                             }
                             return true;
@@ -368,24 +472,45 @@
             game.particles = game.particles.filter(p => {
                 p.x += p.vx;
                 p.y += p.vy;
-                p.life -= dt;
+                p.vy += 0.2; // gravity
+                p.vx *= 0.98;
+                p.vy *= 0.98;
+                p.rotation += p.rotationSpeed;
+                p.life -= dt * 1.5;
                 return p.life > 0;
+            });
+
+            // Update muzzle flashes
+            game.muzzleFlashes = game.muzzleFlashes.filter(flash => {
+                flash.life -= dt * 7;
+                return flash.life > 0;
+            });
+
+            // Update damage popups
+            game.damagePopups = game.damagePopups.filter(popup => {
+                popup.y += popup.vy;
+                popup.vy *= 0.9;
+                popup.life -= dt;
+                return popup.life > 0;
             });
 
             updateHUD();
         }
 
-        function createParticles(x, y, color) {
-            for (let i = 0; i < 10; i++) {
+        function createParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
                 const angle = Math.random() * Math.PI * 2;
-                const speed = 2 + Math.random() * 3;
+                const speed = 2 + Math.random() * 5;
                 game.particles.push({
                     x: x,
                     y: y,
                     vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed,
+                    vy: Math.sin(angle) * speed - 2,
                     color: color,
-                    life: 0.5
+                    life: 0.8,
+                    size: 3 + Math.random() * 5,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotationSpeed: (Math.random() - 0.5) * 0.3
                 });
             }
         }
@@ -408,6 +533,15 @@
         }
 
         function render() {
+            // Apply screen shake
+            ctx.save();
+            if (game.shakeAmount > 0) {
+                ctx.translate(
+                    (Math.random() - 0.5) * game.shakeAmount,
+                    (Math.random() - 0.5) * game.shakeAmount
+                );
+            }
+
             // Background
             ctx.fillStyle = '#2c5f2d';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -437,14 +571,32 @@
                 ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
             });
 
+            // Muzzle flashes
+            game.muzzleFlashes.forEach(flash => {
+                ctx.save();
+                ctx.translate(flash.x, flash.y);
+                ctx.rotate(flash.angle);
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, flash.size);
+                gradient.addColorStop(0, 'rgba(255,255,100,' + flash.life + ')');
+                gradient.addColorStop(0.5, 'rgba(255,150,50,' + flash.life * 0.5 + ')');
+                gradient.addColorStop(1, 'rgba(255,50,0,0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, flash.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
             // Particles
             game.particles.forEach(p => {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
                 ctx.fillStyle = p.color;
                 ctx.globalAlpha = p.life;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
                 ctx.globalAlpha = 1;
+                ctx.restore();
             });
 
             // Bullets
@@ -490,6 +642,22 @@
                 ctx.fillStyle = healthPercent > 0.5 ? '#2ecc71' : healthPercent > 0.25 ? '#f39c12' : '#e74c3c';
                 ctx.fillRect(player.x - barWidth/2, player.y - 35, barWidth * healthPercent, barHeight);
             });
+
+            // Damage popups
+            game.damagePopups.forEach(popup => {
+                ctx.save();
+                ctx.globalAlpha = popup.life;
+                ctx.font = 'bold 24px Arial';
+                ctx.fillStyle = popup.color;
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.textAlign = 'center';
+                ctx.strokeText(popup.text, popup.x, popup.y);
+                ctx.fillText(popup.text, popup.x, popup.y);
+                ctx.restore();
+            });
+
+            ctx.restore(); // End screen shake
         }
 
         let lastTime = performance.now();
