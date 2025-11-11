@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tank Battle 2P - Two Player Battle</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial Black', sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            background: #27ae60;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            border-radius: 10px;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 900px;
+            height: 700px;
+            pointer-events: none;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+            color: white;
+            font-size: 24px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+        .player-hud {
+            background: rgba(0,0,0,0.8);
+            padding: 15px 25px;
+            border-radius: 10px;
+        }
+        .player1-hud { border: 3px solid #3498db; }
+        .player2-hud { border: 3px solid #e74c3c; }
+        #startScreen, #gameOver {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+        }
+        #gameOver { display: none; }
+        h1 {
+            font-size: 64px;
+            color: #e74c3c;
+            text-shadow: 0 0 20px rgba(231,76,60,0.8);
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 20px 50px;
+            font-size: 28px;
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(231,76,60,0.4);
+        }
+        button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(231,76,60,0.6);
+        }
+        .instructions {
+            margin-top: 30px;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+            display: flex;
+            gap: 60px;
+        }
+        .player-controls {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .key {
+            background: rgba(231,76,60,0.5);
+            padding: 8px 15px;
+            border-radius: 8px;
+            margin: 0 3px;
+            font-weight: bold;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="900" height="700"></canvas>
+    <div id="ui">
+        <div id="hud">
+            <div class="player-hud player1-hud">
+                <div>🔵 PLAYER 1</div>
+                <div>HEALTH: <span id="p1health">100</span></div>
+                <div>KILLS: <span id="p1kills">0</span></div>
+            </div>
+            <div class="player-hud player2-hud">
+                <div>🔴 PLAYER 2</div>
+                <div>HEALTH: <span id="p2health">100</span></div>
+                <div>KILLS: <span id="p2kills">0</span></div>
+            </div>
+        </div>
+        <div id="startScreen">
+            <h1>🎮 TANK BATTLE 2P</h1>
+            <button onclick="startGame()">START BATTLE</button>
+            <div class="instructions">
+                <div class="player-controls">
+                    <h3 style="color: #3498db; margin-bottom: 10px;">PLAYER 1 (Blue)</h3>
+                    <div><span class="key">W</span> Forward</div>
+                    <div><span class="key">S</span> Backward</div>
+                    <div><span class="key">A</span> Turn Left</div>
+                    <div><span class="key">D</span> Turn Right</div>
+                    <div><span class="key">SPACE</span> Shoot</div>
+                </div>
+                <div class="player-controls">
+                    <h3 style="color: #e74c3c; margin-bottom: 10px;">PLAYER 2 (Red)</h3>
+                    <div><span class="key">↑</span> Forward</div>
+                    <div><span class="key">↓</span> Backward</div>
+                    <div><span class="key">←</span> Turn Left</div>
+                    <div><span class="key">→</span> Turn Right</div>
+                    <div><span class="key">ENTER</span> Shoot</div>
+                </div>
+            </div>
+        </div>
+        <div id="gameOver">
+            <h1 id="winnerText">PLAYER 1 WINS!</h1>
+            <div id="finalStats" style="color: white; font-size: 24px; margin: 20px 0;"></div>
+            <button onclick="restartGame()">BATTLE AGAIN</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const game = {
+            running: false,
+            player1: null,
+            player2: null,
+            bullets: [],
+            obstacles: [],
+            particles: [],
+            keys: {}
+        };
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            game.running = true;
+
+            game.player1 = {
+                x: 150,
+                y: 350,
+                angle: 0,
+                vx: 0,
+                vy: 0,
+                width: 40,
+                height: 50,
+                health: 100,
+                kills: 0,
+                color: '#3498db',
+                lastShot: 0,
+                shootCooldown: 500
+            };
+
+            game.player2 = {
+                x: 750,
+                y: 350,
+                angle: Math.PI,
+                vx: 0,
+                vy: 0,
+                width: 40,
+                height: 50,
+                health: 100,
+                kills: 0,
+                color: '#e74c3c',
+                lastShot: 0,
+                shootCooldown: 500
+            };
+
+            game.bullets = [];
+            game.particles = [];
+
+            // Create obstacles
+            game.obstacles = [
+                { x: 300, y: 200, width: 80, height: 80 },
+                { x: 520, y: 200, width: 80, height: 80 },
+                { x: 300, y: 420, width: 80, height: 80 },
+                { x: 520, y: 420, width: 80, height: 80 },
+                { x: 410, y: 310, width: 80, height: 80 }
+            ];
+
+            gameLoop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            startGame();
+        }
+
+        document.addEventListener('keydown', e => {
+            game.keys[e.key] = true;
+
+            if (e.key === ' ' && game.running) {
+                e.preventDefault();
+                shootBullet(game.player1);
+            }
+            if (e.key === 'Enter' && game.running) {
+                e.preventDefault();
+                shootBullet(game.player2);
+            }
+        });
+
+        document.addEventListener('keyup', e => {
+            game.keys[e.key] = false;
+        });
+
+        function shootBullet(player) {
+            const now = Date.now();
+            if (now - player.lastShot < player.shootCooldown) return;
+
+            player.lastShot = now;
+
+            const bulletSpeed = 10;
+            game.bullets.push({
+                x: player.x + Math.cos(player.angle) * 30,
+                y: player.y + Math.sin(player.angle) * 30,
+                vx: Math.cos(player.angle) * bulletSpeed,
+                vy: Math.sin(player.angle) * bulletSpeed,
+                owner: player,
+                radius: 5
+            });
+        }
+
+        function update(dt) {
+            if (!game.running) return;
+
+            // Player 1 controls (WASD)
+            if (game.keys['w'] || game.keys['W']) {
+                game.player1.vx = Math.cos(game.player1.angle) * 3;
+                game.player1.vy = Math.sin(game.player1.angle) * 3;
+            } else if (game.keys['s'] || game.keys['S']) {
+                game.player1.vx = -Math.cos(game.player1.angle) * 2;
+                game.player1.vy = -Math.sin(game.player1.angle) * 2;
+            } else {
+                game.player1.vx *= 0.9;
+                game.player1.vy *= 0.9;
+            }
+
+            if (game.keys['a'] || game.keys['A']) {
+                game.player1.angle -= 0.05;
+            }
+            if (game.keys['d'] || game.keys['D']) {
+                game.player1.angle += 0.05;
+            }
+
+            // Player 2 controls (Arrow keys)
+            if (game.keys['ArrowUp']) {
+                game.player2.vx = Math.cos(game.player2.angle) * 3;
+                game.player2.vy = Math.sin(game.player2.angle) * 3;
+            } else if (game.keys['ArrowDown']) {
+                game.player2.vx = -Math.cos(game.player2.angle) * 2;
+                game.player2.vy = -Math.sin(game.player2.angle) * 2;
+            } else {
+                game.player2.vx *= 0.9;
+                game.player2.vy *= 0.9;
+            }
+
+            if (game.keys['ArrowLeft']) {
+                game.player2.angle -= 0.05;
+            }
+            if (game.keys['ArrowRight']) {
+                game.player2.angle += 0.05;
+            }
+
+            // Update players
+            [game.player1, game.player2].forEach(player => {
+                player.x += player.vx;
+                player.y += player.vy;
+
+                // Wall collision
+                if (player.x < 20) player.x = 20;
+                if (player.x > canvas.width - 20) player.x = canvas.width - 20;
+                if (player.y < 20) player.y = 20;
+                if (player.y > canvas.height - 20) player.y = canvas.height - 20;
+
+                // Obstacle collision
+                game.obstacles.forEach(obs => {
+                    if (player.x + 20 > obs.x && player.x - 20 < obs.x + obs.width &&
+                        player.y + 20 > obs.y && player.y - 20 < obs.y + obs.height) {
+                        player.x -= player.vx * 2;
+                        player.y -= player.vy * 2;
+                        player.vx = 0;
+                        player.vy = 0;
+                    }
+                });
+            });
+
+            // Update bullets
+            game.bullets = game.bullets.filter(bullet => {
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+
+                // Wall collision
+                if (bullet.x < 0 || bullet.x > canvas.width ||
+                    bullet.y < 0 || bullet.y > canvas.height) {
+                    return false;
+                }
+
+                // Obstacle collision
+                for (let obs of game.obstacles) {
+                    if (bullet.x > obs.x && bullet.x < obs.x + obs.width &&
+                        bullet.y > obs.y && bullet.y < obs.y + obs.height) {
+                        createParticles(bullet.x, bullet.y, '#FFD700');
+                        return false;
+                    }
+                }
+
+                // Player collision
+                const checkHit = (player) => {
+                    if (bullet.owner !== player) {
+                        const dx = bullet.x - player.x;
+                        const dy = bullet.y - player.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < 25) {
+                            player.health -= 20;
+                            createParticles(bullet.x, bullet.y, player.color);
+
+                            if (player.health <= 0) {
+                                bullet.owner.kills++;
+                                gameOver(bullet.owner);
+                            }
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+
+                if (checkHit(game.player1) || checkHit(game.player2)) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            // Update particles
+            game.particles = game.particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= dt;
+                return p.life > 0;
+            });
+
+            updateHUD();
+        }
+
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 10; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 3;
+                game.particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color: color,
+                    life: 0.5
+                });
+            }
+        }
+
+        function gameOver(winner) {
+            game.running = false;
+            const winnerName = winner === game.player1 ? 'PLAYER 1' : 'PLAYER 2';
+            document.getElementById('winnerText').textContent = `${winnerName} WINS!`;
+            document.getElementById('winnerText').style.color = winner.color;
+            document.getElementById('finalStats').innerHTML =
+                `Player 1 Kills: ${game.player1.kills}<br>Player 2 Kills: ${game.player2.kills}`;
+            document.getElementById('gameOver').style.display = 'flex';
+        }
+
+        function updateHUD() {
+            document.getElementById('p1health').textContent = Math.max(0, game.player1.health);
+            document.getElementById('p1kills').textContent = game.player1.kills;
+            document.getElementById('p2health').textContent = Math.max(0, game.player2.health);
+            document.getElementById('p2kills').textContent = game.player2.kills;
+        }
+
+        function render() {
+            // Background
+            ctx.fillStyle = '#2c5f2d';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Grid pattern
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+            for (let i = 0; i < canvas.height; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+
+            // Obstacles
+            game.obstacles.forEach(obs => {
+                ctx.fillStyle = '#7f8c8d';
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                ctx.strokeStyle = '#95a5a6';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+            });
+
+            // Particles
+            game.particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+
+            // Bullets
+            game.bullets.forEach(bullet => {
+                ctx.fillStyle = '#FFD700';
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // Players
+            [game.player1, game.player2].forEach(player => {
+                ctx.save();
+                ctx.translate(player.x, player.y);
+                ctx.rotate(player.angle);
+
+                // Tank body
+                ctx.fillStyle = player.color;
+                ctx.fillRect(-20, -15, 40, 30);
+
+                // Tank turret
+                ctx.fillStyle = player.color;
+                ctx.fillRect(-10, -8, 30, 16);
+
+                // Tank tracks
+                ctx.fillStyle = '#2c3e50';
+                ctx.fillRect(-20, -18, 40, 5);
+                ctx.fillRect(-20, 13, 40, 5);
+
+                ctx.restore();
+
+                // Health bar
+                const barWidth = 40;
+                const barHeight = 5;
+                const healthPercent = player.health / 100;
+
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(player.x - barWidth/2, player.y - 35, barWidth, barHeight);
+
+                ctx.fillStyle = healthPercent > 0.5 ? '#2ecc71' : healthPercent > 0.25 ? '#f39c12' : '#e74c3c';
+                ctx.fillRect(player.x - barWidth/2, player.y - 35, barWidth * healthPercent, barHeight);
+            });
+        }
+
+        let lastTime = performance.now();
+        function gameLoop() {
+            const currentTime = performance.now();
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>

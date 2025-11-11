@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Hockey 2P - Two Player Hockey</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial Black', sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            background: #ecf0f1;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            border-radius: 10px;
+            border: 10px solid #2c3e50;
+            cursor: none;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 600px;
+            pointer-events: none;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+            color: white;
+            font-size: 48px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+        #startScreen, #gameOver {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+        }
+        #gameOver { display: none; }
+        h1 {
+            font-size: 64px;
+            color: #3498db;
+            text-shadow: 0 0 20px rgba(52,152,219,0.8);
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 20px 50px;
+            font-size: 28px;
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(52,152,219,0.4);
+        }
+        button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(52,152,219,0.6);
+        }
+        .instructions {
+            margin-top: 30px;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="ui">
+        <div id="hud">
+            <div style="color: #e74c3c;">
+                <span id="p1score">0</span>
+            </div>
+            <div style="color: #3498db;">
+                <span id="p2score">0</span>
+            </div>
+        </div>
+        <div id="startScreen">
+            <h1>🏒 AIR HOCKEY 2P</h1>
+            <button onclick="startGame()">START GAME</button>
+            <div class="instructions">
+                <div style="margin: 20px 0;">
+                    Player 1 (Red): Move mouse in left half<br>
+                    Player 2 (Blue): Move mouse in right half
+                </div>
+                <div>First to 7 goals wins!</div>
+            </div>
+        </div>
+        <div id="gameOver">
+            <h1 id="winnerText">PLAYER 1 WINS!</h1>
+            <div id="finalStats" style="color: white; font-size: 24px; margin: 20px 0;"></div>
+            <button onclick="restartGame()">PLAY AGAIN</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const WINNING_SCORE = 7;
+
+        const game = {
+            running: false,
+            puck: null,
+            player1: null,
+            player2: null,
+            score1: 0,
+            score2: 0,
+            mouseX: 0,
+            mouseY: 0,
+            particles: []
+        };
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            game.running = true;
+            game.score1 = 0;
+            game.score2 = 0;
+
+            game.player1 = {
+                x: 150,
+                y: 300,
+                targetX: 150,
+                targetY: 300,
+                radius: 40,
+                color: '#e74c3c',
+                side: 'left'
+            };
+
+            game.player2 = {
+                x: 650,
+                y: 300,
+                targetX: 650,
+                targetY: 300,
+                radius: 40,
+                color: '#3498db',
+                side: 'right'
+            };
+
+            resetPuck();
+            gameLoop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            startGame();
+        }
+
+        function resetPuck() {
+            game.puck = {
+                x: 400,
+                y: 300,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8,
+                radius: 15
+            };
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            if (mouseX < canvas.width / 2) {
+                // Player 1 controls (left half)
+                game.player1.targetX = Math.max(40, Math.min(canvas.width / 2 - 20, mouseX));
+                game.player1.targetY = Math.max(40, Math.min(canvas.height - 40, mouseY));
+            } else {
+                // Player 2 controls (right half)
+                game.player2.targetX = Math.max(canvas.width / 2 + 20, Math.min(canvas.width - 40, mouseX));
+                game.player2.targetY = Math.max(40, Math.min(canvas.height - 40, mouseY));
+            }
+        });
+
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 4;
+                game.particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color: color,
+                    life: 0.8,
+                    size: 3 + Math.random() * 5
+                });
+            }
+        }
+
+        function update(dt) {
+            if (!game.running) return;
+
+            // Update players (smooth movement)
+            [game.player1, game.player2].forEach(player => {
+                const dx = player.targetX - player.x;
+                const dy = player.targetY - player.y;
+                player.x += dx * 0.2;
+                player.y += dy * 0.2;
+            });
+
+            // Update puck
+            game.puck.x += game.puck.vx;
+            game.puck.y += game.puck.vy;
+
+            // Friction
+            game.puck.vx *= 0.995;
+            game.puck.vy *= 0.995;
+
+            // Wall collisions
+            if (game.puck.y - game.puck.radius < 0 || game.puck.y + game.puck.radius > canvas.height) {
+                game.puck.vy *= -0.9;
+                game.puck.y = game.puck.y < canvas.height / 2 ? game.puck.radius : canvas.height - game.puck.radius;
+                createParticles(game.puck.x, game.puck.y, '#FFD700');
+            }
+
+            // Goal detection
+            const goalWidth = 150;
+            const goalTop = canvas.height / 2 - goalWidth / 2;
+            const goalBottom = canvas.height / 2 + goalWidth / 2;
+
+            if (game.puck.x - game.puck.radius < 0) {
+                if (game.puck.y > goalTop && game.puck.y < goalBottom) {
+                    // Goal for player 2
+                    game.score2++;
+                    createParticles(game.puck.x, game.puck.y, '#3498db');
+                    if (game.score2 >= WINNING_SCORE) {
+                        gameOver(game.player2);
+                    } else {
+                        setTimeout(resetPuck, 1000);
+                    }
+                } else {
+                    game.puck.vx *= -0.9;
+                    game.puck.x = game.puck.radius;
+                }
+            }
+
+            if (game.puck.x + game.puck.radius > canvas.width) {
+                if (game.puck.y > goalTop && game.puck.y < goalBottom) {
+                    // Goal for player 1
+                    game.score1++;
+                    createParticles(game.puck.x, game.puck.y, '#e74c3c');
+                    if (game.score1 >= WINNING_SCORE) {
+                        gameOver(game.player1);
+                    } else {
+                        setTimeout(resetPuck, 1000);
+                    }
+                } else {
+                    game.puck.vx *= -0.9;
+                    game.puck.x = canvas.width - game.puck.radius;
+                }
+            }
+
+            // Player-puck collision
+            [game.player1, game.player2].forEach(player => {
+                const dx = game.puck.x - player.x;
+                const dy = game.puck.y - player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < game.puck.radius + player.radius) {
+                    // Collision response
+                    const angle = Math.atan2(dy, dx);
+                    const speed = Math.sqrt(game.puck.vx * game.puck.vx + game.puck.vy * game.puck.vy) + 5;
+
+                    game.puck.vx = Math.cos(angle) * speed;
+                    game.puck.vy = Math.sin(angle) * speed;
+
+                    // Separate puck from paddle
+                    const overlap = player.radius + game.puck.radius - dist;
+                    game.puck.x += Math.cos(angle) * overlap;
+                    game.puck.y += Math.sin(angle) * overlap;
+
+                    createParticles(game.puck.x, game.puck.y, player.color);
+                }
+            });
+
+            // Update particles
+            game.particles = game.particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.95;
+                p.vy *= 0.95;
+                p.life -= dt * 2;
+                return p.life > 0;
+            });
+
+            updateHUD();
+        }
+
+        function gameOver(winner) {
+            game.running = false;
+            const winnerName = winner === game.player1 ? 'PLAYER 1 (Red)' : 'PLAYER 2 (Blue)';
+            document.getElementById('winnerText').textContent = `${winnerName} WINS!`;
+            document.getElementById('winnerText').style.color = winner.color;
+            document.getElementById('finalStats').innerHTML =
+                `Final Score: ${game.score1} - ${game.score2}`;
+            document.getElementById('gameOver').style.display = 'flex';
+        }
+
+        function updateHUD() {
+            document.getElementById('p1score').textContent = game.score1;
+            document.getElementById('p2score').textContent = game.score2;
+        }
+
+        function render() {
+            // Table background
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#dfe6e9');
+            gradient.addColorStop(1, '#b2bec3');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Center line
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 5;
+            ctx.setLineDash([20, 20]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Center circle
+            ctx.strokeStyle = '#3498db';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, 80, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Goals
+            const goalWidth = 150;
+            const goalTop = canvas.height / 2 - goalWidth / 2;
+
+            // Left goal (Player 1's goal)
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(0, goalTop, 10, goalWidth);
+
+            // Right goal (Player 2's goal)
+            ctx.fillStyle = '#3498db';
+            ctx.fillRect(canvas.width - 10, goalTop, 10, goalWidth);
+
+            // Particles
+            game.particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+
+            // Puck
+            const puckGradient = ctx.createRadialGradient(
+                game.puck.x - 5, game.puck.y - 5, 0,
+                game.puck.x, game.puck.y, game.puck.radius
+            );
+            puckGradient.addColorStop(0, '#2c3e50');
+            puckGradient.addColorStop(1, '#34495e');
+            ctx.fillStyle = puckGradient;
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(game.puck.x, game.puck.y, game.puck.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Players
+            [game.player1, game.player2].forEach(player => {
+                // Paddle shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath();
+                ctx.arc(player.x + 3, player.y + 3, player.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Paddle
+                const paddleGradient = ctx.createRadialGradient(
+                    player.x - 10, player.y - 10, 0,
+                    player.x, player.y, player.radius
+                );
+                paddleGradient.addColorStop(0, player.color);
+                paddleGradient.addColorStop(1, player === game.player1 ? '#c0392b' : '#2980b9');
+                ctx.fillStyle = paddleGradient;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Paddle highlight
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.beginPath();
+                ctx.arc(player.x - 10, player.y - 10, player.radius / 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Paddle border
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+        }
+
+        let lastTime = performance.now();
+        function gameLoop() {
+            const currentTime = performance.now();
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>
