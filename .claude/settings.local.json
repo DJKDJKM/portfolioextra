@@ -6,7 +6,13 @@
       "Bash(dir:*)",
       "Bash(findstr:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: 35+ arcade games collection\n\nAdded complete arcade game library with the following features:\n\n🎮 Action & Arcade Games:\n- Pac Maze with intelligent AI pathfinding\n- Jump Quest with 20 themed dimensions\n- Missile Command with wave-based system\n- Asteroids with powerup system\n- Breakout with 6 powerup types\n- Space Shooter, Cosmic Runner, Tank Battle\n- Space Invaders, Flappy Space, Pong\n- And more!\n\n🧩 Puzzle & Strategy Games:\n- Tetris, 2048, Snake, Minesweeper\n- Gem Crush (Match-3), Fruit Merge\n- Sudoku, Memory Cards, Bubble Shooter\n- Simon Says, Sliding Puzzle, Connect Four\n- Tic Tac Toe with AI, Word Search\n\n🌟 Special Features:\n- All games built with vanilla JavaScript\n- HTML5 Canvas rendering\n- LocalStorage for high scores\n- Responsive controls\n- 20 unique dimensions in Jump Quest\n- Enhanced difficulty balancing\n\n🤖 Generated with Claude Code (https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []
