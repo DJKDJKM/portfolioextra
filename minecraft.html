@@ -309,7 +309,7 @@
             mouse: { locked: false, dx: 0, dy: 0 },
             worldSize: { x: 50, y: 30, z: 50 },
             blockSize: 1,
-            renderDistance: 30,
+            renderDistance: 40,
             inventory: {
                 1: 999, 2: 999, 3: 999, 4: 999, 5: 999, 6: 999, 8: 0, 9: 0
             }
@@ -514,8 +514,8 @@
 
             document.addEventListener('mousemove', e => {
                 if (game.mouse.locked) {
-                    game.player.yaw -= e.movementX * 0.002;
-                    game.player.pitch -= e.movementY * 0.002;
+                    game.player.yaw += e.movementX * 0.002;
+                    game.player.pitch += e.movementY * 0.002;
                     game.player.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, game.player.pitch));
                 }
             });
@@ -724,60 +724,132 @@
             const blockType = Object.values(BLOCK_TYPES).find(b => b.id === type);
             if (!blockType || !blockType.color) return;
 
-            // Transform world coordinates to screen coordinates
-            const dx = x - game.player.x;
-            const dy = y - game.player.y;
-            const dz = z - game.player.z;
+            // Calculate block center position relative to player
+            const dx = x + 0.5 - game.player.x;
+            const dy = y + 0.5 - game.player.y - 1.6; // Eye level
+            const dz = z + 0.5 - game.player.z;
 
-            // Rotate around player
+            // Rotate around player (yaw)
             const cosYaw = Math.cos(-game.player.yaw);
             const sinYaw = Math.sin(-game.player.yaw);
-            const cosPitch = Math.cos(-game.player.pitch);
-            const sinPitch = Math.sin(-game.player.pitch);
-
             let rx = dx * cosYaw - dz * sinYaw;
             let rz = dx * sinYaw + dz * cosYaw;
             let ry = dy;
 
+            // Rotate pitch
+            const cosPitch = Math.cos(-game.player.pitch);
+            const sinPitch = Math.sin(-game.player.pitch);
             const tempY = ry * cosPitch - rz * sinPitch;
             rz = ry * sinPitch + rz * cosPitch;
             ry = tempY;
 
             if (rz < 0.1) return; // Behind camera
 
-            // Project to screen
-            const scale = (canvas.width / 2) / rz;
+            // Calculate perspective projection
+            const fov = 1.5; // Field of view factor
+            const scale = (canvas.height * fov) / rz;
             const screenX = canvas.width / 2 + rx * scale;
             const screenY = canvas.height / 2 - ry * scale;
             const size = scale * game.blockSize;
 
-            if (size < 1) return; // Too small
+            if (size < 2) return; // Too small to render
+            if (screenX + size < 0 || screenX - size > canvas.width) return; // Off screen
+            if (screenY + size < 0 || screenY - size > canvas.height) return; // Off screen
 
-            // Draw block with shading based on face direction
             ctx.save();
 
-            // Top face (lighter)
-            if (getBlock(x, y + 1, z) === BLOCK_TYPES.AIR.id) {
-                ctx.fillStyle = blockType.topColor || lightenColor(blockType.color, 20);
-                ctx.fillRect(screenX - size / 2, screenY - size / 2 - size * 0.3, size, size * 0.3);
+            // Define cube vertices for isometric view
+            const halfSize = size / 2;
+
+            // Check which faces are visible
+            const topVisible = getBlock(x, y + 1, z) === BLOCK_TYPES.AIR.id;
+            const frontVisible = true; // Always draw front faces
+            const rightVisible = rx > 0;
+            const leftVisible = rx < 0;
+
+            // Distance fog
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            const fogFactor = Math.max(0, Math.min(1, (game.renderDistance - distance) / game.renderDistance));
+
+            // Draw faces in order: back to front for proper layering
+
+            // Top face (isometric view)
+            if (topVisible && ry < 0) {
+                ctx.fillStyle = applyFog(blockType.topColor || lightenColor(blockType.color, 30), fogFactor);
+                ctx.beginPath();
+                ctx.moveTo(screenX, screenY - halfSize);
+                ctx.lineTo(screenX + halfSize * 0.866, screenY - halfSize * 0.5);
+                ctx.lineTo(screenX, screenY);
+                ctx.lineTo(screenX - halfSize * 0.866, screenY - halfSize * 0.5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,' + (0.3 * fogFactor) + ')';
+                ctx.lineWidth = Math.max(1, size * 0.02);
+                ctx.stroke();
             }
 
-            // Front face
-            ctx.fillStyle = blockType.color;
-            ctx.fillRect(screenX - size / 2, screenY - size / 2, size, size);
-
-            // Side face (darker)
-            if (getBlock(x + 1, y, z) === BLOCK_TYPES.AIR.id || getBlock(x - 1, y, z) === BLOCK_TYPES.AIR.id) {
-                ctx.fillStyle = darkenColor(blockType.color, 20);
-                ctx.fillRect(screenX - size / 2, screenY - size / 2, size * 0.2, size);
+            // Right face (if visible from angle)
+            if (rightVisible) {
+                ctx.fillStyle = applyFog(lightenColor(blockType.color, 10), fogFactor);
+                ctx.beginPath();
+                ctx.moveTo(screenX, screenY);
+                ctx.lineTo(screenX + halfSize * 0.866, screenY - halfSize * 0.5);
+                ctx.lineTo(screenX + halfSize * 0.866, screenY + halfSize * 0.5);
+                ctx.lineTo(screenX, screenY + size);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,' + (0.2 * fogFactor) + ')';
+                ctx.lineWidth = Math.max(1, size * 0.02);
+                ctx.stroke();
             }
 
-            // Outline
-            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-            ctx.lineWidth = Math.max(1, size * 0.02);
-            ctx.strokeRect(screenX - size / 2, screenY - size / 2, size, size);
+            // Left face (if visible from angle)
+            if (leftVisible) {
+                ctx.fillStyle = applyFog(darkenColor(blockType.color, 15), fogFactor);
+                ctx.beginPath();
+                ctx.moveTo(screenX, screenY);
+                ctx.lineTo(screenX - halfSize * 0.866, screenY - halfSize * 0.5);
+                ctx.lineTo(screenX - halfSize * 0.866, screenY + halfSize * 0.5);
+                ctx.lineTo(screenX, screenY + size);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,' + (0.2 * fogFactor) + ')';
+                ctx.lineWidth = Math.max(1, size * 0.02);
+                ctx.stroke();
+            }
+
+            // Front face (main visible face)
+            if (frontVisible) {
+                ctx.fillStyle = applyFog(blockType.color, fogFactor);
+                ctx.fillRect(screenX - halfSize, screenY - halfSize, size, size);
+                ctx.strokeStyle = 'rgba(0,0,0,' + (0.4 * fogFactor) + ')';
+                ctx.lineWidth = Math.max(1, size * 0.03);
+                ctx.strokeRect(screenX - halfSize, screenY - halfSize, size, size);
+            }
 
             ctx.restore();
+        }
+
+        function applyFog(color, fogFactor) {
+            if (fogFactor >= 0.99) return color;
+
+            const skyColor = { r: 135, g: 206, b: 235 }; // Sky blue
+            const blockColor = hexToRgb(color);
+
+            const r = Math.floor(blockColor.r * fogFactor + skyColor.r * (1 - fogFactor));
+            const g = Math.floor(blockColor.g * fogFactor + skyColor.g * (1 - fogFactor));
+            const b = Math.floor(blockColor.b * fogFactor + skyColor.b * (1 - fogFactor));
+
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function hexToRgb(hex) {
+            const num = parseInt(hex.replace('#', ''), 16);
+            return {
+                r: (num >> 16) & 255,
+                g: (num >> 8) & 255,
+                b: num & 255
+            };
         }
 
         function lightenColor(color, percent) {
