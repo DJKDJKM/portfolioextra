@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penalty Kick - Soccer Shootout</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial Black', sans-serif;
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            background: #27ae60;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            border-radius: 10px;
+            border: 5px solid white;
+            cursor: crosshair;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 600px;
+            pointer-events: none;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            color: white;
+            font-size: 24px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+        .hud-item {
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,255,255,0.6);
+        }
+        #startScreen, #gameOver {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+        }
+        #gameOver { display: none; }
+        h1 {
+            font-size: 64px;
+            color: #00b894;
+            text-shadow: 0 0 20px rgba(0,184,148,0.8);
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 20px 50px;
+            font-size: 28px;
+            background: linear-gradient(45deg, #00b894, #00cec9);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(0,184,148,0.4);
+        }
+        button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,184,148,0.6);
+        }
+        .instructions {
+            margin-top: 30px;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+        }
+        #result {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 72px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 0 0 20px #000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="ui">
+        <div id="hud">
+            <div class="hud-item">GOALS: <span id="goals">0</span></div>
+            <div class="hud-item">KICKS: <span id="kicks">5</span></div>
+            <div class="hud-item">STREAK: <span id="streak">0</span></div>
+        </div>
+        <div id="result"></div>
+        <div id="startScreen">
+            <h1>⚽ PENALTY KICK</h1>
+            <button onclick="startGame()">START SHOOTING</button>
+            <div class="instructions">
+                <div style="margin: 20px 0;">
+                    Click where you want to shoot!
+                </div>
+                <div>Beat the goalkeeper and score goals!</div>
+            </div>
+        </div>
+        <div id="gameOver">
+            <h1>MATCH OVER!</h1>
+            <div id="finalStats" style="color: white; font-size: 24px; margin: 20px 0;"></div>
+            <button onclick="restartGame()">PLAY AGAIN</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const game = {
+            running: false,
+            goals: 0,
+            kicks: 5,
+            streak: 0,
+            ball: null,
+            goalkeeper: { x: 400, targetX: 400, y: 200, diving: false, diveX: 0 },
+            shooting: false
+        };
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            game.running = true;
+            game.goals = 0;
+            game.kicks = 5;
+            game.streak = 0;
+            game.shooting = false;
+            resetBall();
+            gameLoop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            startGame();
+        }
+
+        function resetBall() {
+            game.ball = {
+                x: 400,
+                y: 550,
+                targetX: null,
+                targetY: null,
+                moving: false,
+                t: 0
+            };
+            game.goalkeeper.x = 400;
+            game.goalkeeper.targetX = 400;
+            game.goalkeeper.diving = false;
+            game.shooting = false;
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (!game.running || game.shooting || game.kicks <= 0) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            // Only shoot if clicking near the goal area
+            if (clickY < 350) {
+                game.ball.targetX = clickX;
+                game.ball.targetY = clickY;
+                game.ball.moving = true;
+                game.shooting = true;
+                game.kicks--;
+
+                // Goalkeeper AI - react to shot
+                setTimeout(() => {
+                    if (Math.abs(clickX - 400) > 100) {
+                        // Shot is far from center, keeper dives
+                        game.goalkeeper.diveX = clickX;
+                        game.goalkeeper.diving = true;
+                    } else {
+                        // Shot is center, keeper stays
+                        game.goalkeeper.targetX = clickX;
+                    }
+                }, 200);
+            }
+        });
+
+        function update(dt) {
+            if (!game.running) return;
+
+            // Update goalkeeper position
+            if (!game.goalkeeper.diving) {
+                game.goalkeeper.x += (game.goalkeeper.targetX - game.goalkeeper.x) * dt * 5;
+            } else {
+                game.goalkeeper.x += (game.goalkeeper.diveX - game.goalkeeper.x) * dt * 8;
+            }
+
+            // Update ball
+            if (game.ball.moving) {
+                game.ball.t += dt * 2;
+
+                if (game.ball.t >= 1) {
+                    // Check if goal or save
+                    const goalTop = 150;
+                    const goalBottom = 350;
+                    const goalLeft = 200;
+                    const goalRight = 600;
+
+                    const inGoal = game.ball.targetX >= goalLeft &&
+                                   game.ball.targetX <= goalRight &&
+                                   game.ball.targetY >= goalTop &&
+                                   game.ball.targetY <= goalBottom;
+
+                    const keeperSave = Math.abs(game.ball.targetX - game.goalkeeper.x) < 80 &&
+                                       Math.abs(game.ball.targetY - game.goalkeeper.y) < 100;
+
+                    if (inGoal && !keeperSave) {
+                        // GOAL!
+                        game.goals++;
+                        game.streak++;
+                        showResult('GOAL! ⚽', '#00FF00');
+                    } else {
+                        // SAVED or MISS
+                        game.streak = 0;
+                        if (keeperSave) {
+                            showResult('SAVED! 🧤', '#FF0000');
+                        } else {
+                            showResult('MISSED! ❌', '#FF0000');
+                        }
+                    }
+
+                    if (game.kicks > 0) {
+                        setTimeout(() => resetBall(), 2000);
+                    } else {
+                        setTimeout(() => gameOver(), 2000);
+                    }
+                } else {
+                    // Interpolate ball position
+                    const ease = game.ball.t < 0.5 ?
+                                 2 * game.ball.t * game.ball.t :
+                                 1 - Math.pow(-2 * game.ball.t + 2, 2) / 2;
+
+                    game.ball.x = 400 + (game.ball.targetX - 400) * ease;
+                    game.ball.y = 550 - (550 - game.ball.targetY) * ease;
+                }
+            }
+
+            updateHUD();
+        }
+
+        function showResult(text, color) {
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = text;
+            resultEl.style.color = color;
+            resultEl.style.opacity = '1';
+            setTimeout(() => {
+                resultEl.style.opacity = '0';
+            }, 1500);
+        }
+
+        function gameOver() {
+            game.running = false;
+            document.getElementById('gameOver').style.display = 'flex';
+            const accuracy = Math.floor((game.goals / 5) * 100);
+            document.getElementById('finalStats').innerHTML =
+                `Goals Scored: ${game.goals}/5<br>Best Streak: ${game.streak}<br>Accuracy: ${accuracy}%`;
+        }
+
+        function updateHUD() {
+            document.getElementById('goals').textContent = game.goals;
+            document.getElementById('kicks').textContent = game.kicks;
+            document.getElementById('streak').textContent = game.streak;
+        }
+
+        function render() {
+            // Field
+            const fieldGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            fieldGradient.addColorStop(0, '#2ecc71');
+            fieldGradient.addColorStop(1, '#27ae60');
+            ctx.fillStyle = fieldGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Field lines
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = 3;
+            for (let i = 0; i < 15; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * 50);
+                ctx.lineTo(canvas.width, i * 50);
+                ctx.stroke();
+            }
+
+            // Penalty spot
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(400, 550, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Goal
+            ctx.fillStyle = 'rgba(200,200,200,0.3)';
+            ctx.fillRect(200, 150, 400, 200);
+
+            // Goal posts
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 8;
+            ctx.strokeRect(200, 150, 400, 200);
+
+            // Goal net
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 10; i++) {
+                ctx.beginPath();
+                ctx.moveTo(220 + i * 40, 150);
+                ctx.lineTo(220 + i * 40, 350);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(200, 165 + i * 20);
+                ctx.lineTo(600, 165 + i * 20);
+                ctx.stroke();
+            }
+
+            // Goalkeeper
+            const keeper = game.goalkeeper;
+
+            // Keeper shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(keeper.x, keeper.y + 60, 30, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Keeper body
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(keeper.x - 20, keeper.y - 20, 40, 60);
+
+            // Keeper head
+            ctx.fillStyle = '#FFDAB9';
+            ctx.beginPath();
+            ctx.arc(keeper.x, keeper.y - 30, 15, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Keeper arms
+            if (keeper.diving) {
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 10;
+                ctx.beginPath();
+                ctx.moveTo(keeper.x - 20, keeper.y);
+                ctx.lineTo(keeper.x - 40, keeper.y - 10);
+                ctx.stroke();
+            } else {
+                ctx.beginPath();
+                ctx.moveTo(keeper.x + 20, keeper.y);
+                ctx.lineTo(keeper.x + 40, keeper.y - 10);
+                ctx.stroke();
+            }
+
+            // Ball
+            if (game.ball) {
+                // Ball shadow
+                const shadowSize = 20 - game.ball.y / 40;
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.ellipse(game.ball.x, 570, shadowSize, shadowSize * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Ball
+                const ballSize = 15 + (550 - game.ball.y) / 40;
+                const ballGradient = ctx.createRadialGradient(
+                    game.ball.x - 3, game.ball.y - 3, 0,
+                    game.ball.x, game.ball.y, ballSize
+                );
+                ballGradient.addColorStop(0, 'white');
+                ballGradient.addColorStop(1, '#ddd');
+                ctx.fillStyle = ballGradient;
+                ctx.beginPath();
+                ctx.arc(game.ball.x, game.ball.y, ballSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Ball pattern
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(game.ball.x, game.ball.y, ballSize, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Pentagons
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * Math.PI * 2) / 5;
+                    ctx.beginPath();
+                    ctx.moveTo(game.ball.x, game.ball.y);
+                    ctx.lineTo(
+                        game.ball.x + Math.cos(angle) * ballSize,
+                        game.ball.y + Math.sin(angle) * ballSize
+                    );
+                    ctx.stroke();
+                }
+            }
+
+            // Aim indicator (when not shooting)
+            if (!game.shooting && game.kicks > 0) {
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Click on goal to shoot!', 400, 500);
+            }
+        }
+
+        let lastTime = performance.now();
+        function gameLoop() {
+            const currentTime = performance.now();
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            update(dt);
+            render();
+
+            if (game.running || game.shooting) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+    </script>
+</body>
+</html>

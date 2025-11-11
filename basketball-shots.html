@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basketball Shots - Arcade Sports</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial Black', sans-serif;
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            background: linear-gradient(135deg, #87CEEB 0%, #4682B4 100%);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            border-radius: 10px;
+            border: 5px solid #FF6B35;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 700px;
+            pointer-events: none;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            color: white;
+            font-size: 24px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+        .hud-item {
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,107,53,0.8);
+        }
+        #powerMeter {
+            position: absolute;
+            bottom: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 300px;
+            background: rgba(0,0,0,0.8);
+            border-radius: 25px;
+            border: 3px solid #FFD700;
+            overflow: hidden;
+        }
+        #powerFill {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: linear-gradient(180deg, #FF0000 0%, #FFD700 50%, #00FF00 100%);
+            height: 0%;
+            transition: height 0.1s;
+        }
+        #startScreen, #gameOver {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+        }
+        #gameOver { display: none; }
+        h1 {
+            font-size: 64px;
+            color: #FF6B35;
+            text-shadow: 0 0 20px rgba(255,107,53,0.8);
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 20px 50px;
+            font-size: 28px;
+            background: linear-gradient(45deg, #FF6B35, #F7931E);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(255,107,53,0.4);
+        }
+        button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(255,107,53,0.6);
+        }
+        .instructions {
+            margin-top: 30px;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="600" height="700"></canvas>
+    <div id="ui">
+        <div id="hud">
+            <div class="hud-item">SCORE: <span id="score">0</span></div>
+            <div class="hud-item">SHOTS: <span id="shots">10</span></div>
+            <div class="hud-item">STREAK: <span id="streak">0</span></div>
+        </div>
+        <div id="powerMeter">
+            <div id="powerFill"></div>
+        </div>
+        <div id="startScreen">
+            <h1>🏀 BASKETBALL SHOTS</h1>
+            <button onclick="startGame()">START SHOOTING</button>
+            <div class="instructions">
+                <div style="margin: 20px 0;">
+                    Click and hold to charge power, release to shoot!
+                </div>
+                <div>Score as many baskets as you can!</div>
+            </div>
+        </div>
+        <div id="gameOver">
+            <h1>GAME OVER!</h1>
+            <div id="finalStats" style="color: white; font-size: 24px; margin: 20px 0;"></div>
+            <button onclick="restartGame()">PLAY AGAIN</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const game = {
+            running: false,
+            score: 0,
+            shots: 10,
+            streak: 0,
+            charging: false,
+            power: 0,
+            angle: Math.PI / 4,
+            ball: null,
+            hoop: { x: 500, y: 200, width: 100, height: 20 }
+        };
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            game.running = true;
+            game.score = 0;
+            game.shots = 10;
+            game.streak = 0;
+            game.power = 0;
+            game.charging = false;
+            game.ball = null;
+            spawnBall();
+            gameLoop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            startGame();
+        }
+
+        function spawnBall() {
+            game.ball = {
+                x: 100,
+                y: 600,
+                vx: 0,
+                vy: 0,
+                radius: 15,
+                shot: false,
+                scored: false
+            };
+        }
+
+        canvas.addEventListener('mousedown', () => {
+            if (game.running && game.ball && !game.ball.shot && game.shots > 0) {
+                game.charging = true;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (game.charging && game.ball && !game.ball.shot) {
+                shootBall();
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (game.running && game.ball && !game.ball.shot) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+
+                const dx = mouseX - game.ball.x;
+                const dy = mouseY - game.ball.y;
+                game.angle = Math.atan2(dy, dx);
+            }
+        });
+
+        function shootBall() {
+            if (!game.ball || game.shots <= 0) return;
+
+            game.charging = false;
+            game.ball.shot = true;
+            game.shots--;
+
+            const speed = 10 + game.power * 10;
+            game.ball.vx = Math.cos(game.angle) * speed;
+            game.ball.vy = Math.sin(game.angle) * speed;
+            game.power = 0;
+        }
+
+        function update(dt) {
+            if (!game.running) return;
+
+            // Charge power
+            if (game.charging) {
+                game.power = Math.min(1, game.power + dt * 1.5);
+            }
+
+            // Update ball
+            if (game.ball && game.ball.shot) {
+                // Apply gravity
+                game.ball.vy += 20 * dt;
+
+                // Update position
+                game.ball.x += game.ball.vx;
+                game.ball.y += game.ball.vy;
+
+                // Check hoop collision
+                if (!game.ball.scored) {
+                    const hoopTop = game.hoop.y;
+                    const hoopBottom = game.hoop.y + game.hoop.height;
+                    const hoopLeft = game.hoop.x - game.hoop.width / 2;
+                    const hoopRight = game.hoop.x + game.hoop.width / 2;
+
+                    // Ball passing through hoop from above
+                    if (game.ball.y - game.ball.radius > hoopTop &&
+                        game.ball.y - game.ball.radius < hoopBottom &&
+                        game.ball.x > hoopLeft + 10 && game.ball.x < hoopRight - 10 &&
+                        game.ball.vy > 0) {
+
+                        game.ball.scored = true;
+                        game.score += 10 * (game.streak + 1);
+                        game.streak++;
+
+                        // Perfect shot bonus
+                        if (Math.abs(game.ball.x - game.hoop.x) < 10) {
+                            game.score += 50;
+                        }
+                    }
+                }
+
+                // Ball out of bounds
+                if (game.ball.x < -50 || game.ball.x > canvas.width + 50 ||
+                    game.ball.y > canvas.height + 50) {
+
+                    if (!game.ball.scored) {
+                        game.streak = 0;
+                    }
+
+                    if (game.shots > 0) {
+                        spawnBall();
+                    } else {
+                        gameOver();
+                    }
+                }
+            }
+
+            updateHUD();
+        }
+
+        function gameOver() {
+            game.running = false;
+            document.getElementById('gameOver').style.display = 'flex';
+            const accuracy = Math.floor((game.score / 100) * 10);
+            document.getElementById('finalStats').innerHTML =
+                `Final Score: ${game.score}<br>Best Streak: ${game.streak}<br>Accuracy: ${accuracy}%`;
+        }
+
+        function updateHUD() {
+            document.getElementById('score').textContent = game.score;
+            document.getElementById('shots').textContent = game.shots;
+            document.getElementById('streak').textContent = game.streak;
+            document.getElementById('powerFill').style.height = (game.power * 100) + '%';
+        }
+
+        function render() {
+            // Sky gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#4682B4');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Court
+            ctx.fillStyle = '#D2691E';
+            ctx.fillRect(0, canvas.height - 150, canvas.width, 150);
+
+            // Court lines
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height - 150);
+            ctx.lineTo(canvas.width, canvas.height - 150);
+            ctx.stroke();
+
+            // Backboard
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(game.hoop.x + 40, game.hoop.y - 80, 10, 100);
+
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(game.hoop.x - 10, game.hoop.y - 80, 60, 60);
+
+            ctx.strokeStyle = '#FF0000';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(game.hoop.x + 5, game.hoop.y - 65, 30, 30);
+
+            // Hoop
+            ctx.strokeStyle = '#FF6B35';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(game.hoop.x, game.hoop.y, game.hoop.width / 2, 0, Math.PI);
+            ctx.stroke();
+
+            // Net
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 8; i++) {
+                const angle = i * Math.PI / 7;
+                const x = game.hoop.x + Math.cos(angle) * game.hoop.width / 2;
+                ctx.beginPath();
+                ctx.moveTo(x, game.hoop.y);
+                ctx.lineTo(x, game.hoop.y + 30);
+                ctx.stroke();
+            }
+
+            // Ball
+            if (game.ball) {
+                // Ball shadow
+                if (!game.ball.shot || game.ball.y < canvas.height - 100) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    ctx.beginPath();
+                    ctx.ellipse(game.ball.x, canvas.height - 120, game.ball.radius * 0.8, game.ball.radius * 0.3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Ball
+                const ballGradient = ctx.createRadialGradient(
+                    game.ball.x - 5, game.ball.y - 5, 0,
+                    game.ball.x, game.ball.y, game.ball.radius
+                );
+                ballGradient.addColorStop(0, '#FF8C42');
+                ballGradient.addColorStop(1, '#FF6B35');
+                ctx.fillStyle = ballGradient;
+                ctx.beginPath();
+                ctx.arc(game.ball.x, game.ball.y, game.ball.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Ball lines
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(game.ball.x, game.ball.y, game.ball.radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Ball stripes
+                ctx.beginPath();
+                ctx.moveTo(game.ball.x - game.ball.radius, game.ball.y);
+                ctx.lineTo(game.ball.x + game.ball.radius, game.ball.y);
+                ctx.stroke();
+
+                // Aim line
+                if (!game.ball.shot) {
+                    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([10, 10]);
+                    ctx.beginPath();
+                    ctx.moveTo(game.ball.x, game.ball.y);
+                    const aimLength = 100 + game.power * 100;
+                    ctx.lineTo(
+                        game.ball.x + Math.cos(game.angle) * aimLength,
+                        game.ball.y + Math.sin(game.angle) * aimLength
+                    );
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+
+            // Score popup
+            if (game.ball && game.ball.scored && game.ball.y < canvas.height - 100) {
+                ctx.fillStyle = '#FFD700';
+                ctx.font = 'bold 48px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = '#000';
+                ctx.shadowBlur = 10;
+                ctx.fillText('+' + (10 * game.streak), game.hoop.x, game.hoop.y - 100);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        let lastTime = performance.now();
+        function gameLoop() {
+            const currentTime = performance.now();
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            update(dt);
+            render();
+
+            if (game.running || game.ball?.shot) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+    </script>
+</body>
+</html>

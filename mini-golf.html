@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Golf - Putt Putt Challenge</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial Black', sans-serif;
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            background: #10b981;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            border-radius: 10px;
+            border: 5px solid #8b4513;
+            cursor: crosshair;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 600px;
+            pointer-events: none;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            color: white;
+            font-size: 24px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+        .hud-item {
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,255,255,0.6);
+        }
+        #startScreen, #levelComplete {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+        }
+        #levelComplete { display: none; }
+        h1 {
+            font-size: 64px;
+            color: #10b981;
+            text-shadow: 0 0 20px rgba(16,185,129,0.8);
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 20px 50px;
+            font-size: 28px;
+            background: linear-gradient(45deg, #10b981, #059669);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(16,185,129,0.4);
+        }
+        button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(16,185,129,0.6);
+        }
+        .instructions {
+            margin-top: 30px;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="ui">
+        <div id="hud">
+            <div class="hud-item">HOLE: <span id="hole">1</span>/9</div>
+            <div class="hud-item">STROKES: <span id="strokes">0</span></div>
+            <div class="hud-item">TOTAL: <span id="total">0</span></div>
+        </div>
+        <div id="startScreen">
+            <h1>⛳ MINI GOLF</h1>
+            <button onclick="startGame()">TEE OFF</button>
+            <div class="instructions">
+                <div style="margin: 20px 0;">
+                    Click and drag to aim, release to putt!
+                </div>
+                <div>Complete 9 holes in as few strokes as possible!</div>
+            </div>
+        </div>
+        <div id="levelComplete">
+            <h1>HOLE COMPLETE!</h1>
+            <div id="holeStats" style="color: white; font-size: 24px; margin: 20px 0;"></div>
+            <button onclick="nextHole()">NEXT HOLE</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const game = {
+            running: false,
+            currentHole: 0,
+            strokes: 0,
+            totalStrokes: 0,
+            ball: null,
+            hole: null,
+            obstacles: [],
+            aiming: false,
+            aimStart: { x: 0, y: 0 }
+        };
+
+        const holes = [
+            // Hole 1: Straight shot
+            {
+                ball: { x: 100, y: 500 },
+                hole: { x: 700, y: 100, radius: 20 },
+                obstacles: []
+            },
+            // Hole 2: With bunker
+            {
+                ball: { x: 100, y: 500 },
+                hole: { x: 700, y: 100, radius: 20 },
+                obstacles: [
+                    { x: 400, y: 300, width: 100, height: 100, type: 'sand' }
+                ]
+            },
+            // Hole 3: L-shaped
+            {
+                ball: { x: 100, y: 500 },
+                hole: { x: 100, y: 100, radius: 20 },
+                obstacles: [
+                    { x: 200, y: 200, width: 500, height: 50, type: 'wall' }
+                ]
+            },
+            // Hole 4: Zigzag
+            {
+                ball: { x: 100, y: 500 },
+                hole: { x: 700, y: 100, radius: 20 },
+                obstacles: [
+                    { x: 250, y: 400, width: 400, height: 50, type: 'wall' },
+                    { x: 150, y: 200, width: 400, height: 50, type: 'wall' }
+                ]
+            },
+            // Hole 5: Island green
+            {
+                ball: { x: 400, y: 500 },
+                hole: { x: 400, y: 150, radius: 20 },
+                obstacles: [
+                    { x: 200, y: 100, width: 400, height: 30, type: 'water' },
+                    { x: 200, y: 220, width: 400, height: 30, type: 'water' }
+                ]
+            },
+            // Hole 6: Narrow passage
+            {
+                ball: { x: 100, y: 500 },
+                hole: { x: 700, y: 100, radius: 20 },
+                obstacles: [
+                    { x: 350, y: 0, width: 50, height: 280, type: 'wall' },
+                    { x: 350, y: 320, width: 50, height: 280, type: 'wall' }
+                ]
+            },
+            // Hole 7: Multiple bunkers
+            {
+                ball: { x: 100, y: 500 },
+                hole: { x: 700, y: 100, radius: 20 },
+                obstacles: [
+                    { x: 200, y: 350, width: 80, height: 80, type: 'sand' },
+                    { x: 400, y: 250, width: 80, height: 80, type: 'sand' },
+                    { x: 550, y: 200, width: 80, height: 80, type: 'sand' }
+                ]
+            },
+            // Hole 8: U-shape
+            {
+                ball: { x: 400, y: 500 },
+                hole: { x: 400, y: 100, radius: 20 },
+                obstacles: [
+                    { x: 200, y: 150, width: 50, height: 350, type: 'wall' },
+                    { x: 550, y: 150, width: 50, height: 350, type: 'wall' }
+                ]
+            },
+            // Hole 9: Final challenge
+            {
+                ball: { x: 100, y: 500 },
+                hole: { x: 700, y: 100, radius: 20 },
+                obstacles: [
+                    { x: 300, y: 400, width: 60, height: 60, type: 'sand' },
+                    { x: 450, y: 300, width: 150, height: 30, type: 'water' },
+                    { x: 500, y: 150, width: 60, height: 60, type: 'sand' }
+                ]
+            }
+        ];
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            game.running = true;
+            game.currentHole = 0;
+            game.totalStrokes = 0;
+            loadHole(0);
+            gameLoop();
+        }
+
+        function loadHole(index) {
+            const holeData = holes[index];
+            game.strokes = 0;
+            game.ball = {
+                x: holeData.ball.x,
+                y: holeData.ball.y,
+                vx: 0,
+                vy: 0,
+                radius: 8,
+                moving: false
+            };
+            game.hole = holeData.hole;
+            game.obstacles = holeData.obstacles;
+            updateHUD();
+        }
+
+        function nextHole() {
+            document.getElementById('levelComplete').style.display = 'none';
+            game.currentHole++;
+
+            if (game.currentHole >= holes.length) {
+                // Game complete
+                alert(`Course Complete! Total Strokes: ${game.totalStrokes}\nPar: ${holes.length * 3}`);
+                game.currentHole = 0;
+                game.totalStrokes = 0;
+            }
+
+            loadHole(game.currentHole);
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (!game.running || game.ball.moving) return;
+
+            const rect = canvas.getBoundingClientRect();
+            game.aiming = true;
+            game.aimStart = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (!game.aiming) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const aimEnd = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+
+            const dx = game.aimStart.x - aimEnd.x;
+            const dy = game.aimStart.y - aimEnd.y;
+            const power = Math.min(Math.sqrt(dx * dx + dy * dy) / 50, 3);
+
+            game.ball.vx = dx * power * 0.5;
+            game.ball.vy = dy * power * 0.5;
+            game.ball.moving = true;
+            game.strokes++;
+            game.totalStrokes++;
+            game.aiming = false;
+
+            updateHUD();
+        });
+
+        function update(dt) {
+            if (!game.running) return;
+
+            if (game.ball.moving) {
+                // Apply friction
+                game.ball.vx *= 0.98;
+                game.ball.vy *= 0.98;
+
+                // Update position
+                game.ball.x += game.ball.vx;
+                game.ball.y += game.ball.vy;
+
+                // Wall collisions
+                if (game.ball.x - game.ball.radius < 0 || game.ball.x + game.ball.radius > canvas.width) {
+                    game.ball.vx *= -0.7;
+                    game.ball.x = Math.max(game.ball.radius, Math.min(canvas.width - game.ball.radius, game.ball.x));
+                }
+                if (game.ball.y - game.ball.radius < 0 || game.ball.y + game.ball.radius > canvas.height) {
+                    game.ball.vy *= -0.7;
+                    game.ball.y = Math.max(game.ball.radius, Math.min(canvas.height - game.ball.radius, game.ball.y));
+                }
+
+                // Obstacle collisions
+                game.obstacles.forEach(obs => {
+                    if (game.ball.x + game.ball.radius > obs.x &&
+                        game.ball.x - game.ball.radius < obs.x + obs.width &&
+                        game.ball.y + game.ball.radius > obs.y &&
+                        game.ball.y - game.ball.radius < obs.y + obs.height) {
+
+                        if (obs.type === 'wall') {
+                            // Bounce off wall
+                            const overlapX = Math.min(
+                                game.ball.x + game.ball.radius - obs.x,
+                                obs.x + obs.width - (game.ball.x - game.ball.radius)
+                            );
+                            const overlapY = Math.min(
+                                game.ball.y + game.ball.radius - obs.y,
+                                obs.y + obs.height - (game.ball.y - game.ball.radius)
+                            );
+
+                            if (overlapX < overlapY) {
+                                game.ball.vx *= -0.7;
+                            } else {
+                                game.ball.vy *= -0.7;
+                            }
+                        } else if (obs.type === 'sand') {
+                            // Slow down in sand
+                            game.ball.vx *= 0.9;
+                            game.ball.vy *= 0.9;
+                        } else if (obs.type === 'water') {
+                            // Water hazard - reset to start
+                            game.ball.x = holes[game.currentHole].ball.x;
+                            game.ball.y = holes[game.currentHole].ball.y;
+                            game.ball.vx = 0;
+                            game.ball.vy = 0;
+                            game.strokes += 2;
+                            game.totalStrokes += 2;
+                            updateHUD();
+                        }
+                    }
+                });
+
+                // Check if ball reached hole
+                const dx = game.ball.x - game.hole.x;
+                const dy = game.ball.y - game.hole.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < game.hole.radius && Math.abs(game.ball.vx) < 2 && Math.abs(game.ball.vy) < 2) {
+                    // Ball in hole!
+                    game.ball.x = game.hole.x;
+                    game.ball.y = game.hole.y;
+                    game.ball.vx = 0;
+                    game.ball.vy = 0;
+                    game.ball.moving = false;
+
+                    setTimeout(() => {
+                        document.getElementById('levelComplete').style.display = 'flex';
+                        const par = 3;
+                        let rating = '';
+                        if (game.strokes === 1) rating = 'HOLE IN ONE! 🏆';
+                        else if (game.strokes <= par - 2) rating = 'EAGLE! 🦅';
+                        else if (game.strokes === par - 1) rating = 'BIRDIE! 🐦';
+                        else if (game.strokes === par) rating = 'PAR! ✓';
+                        else if (game.strokes === par + 1) rating = 'BOGEY';
+                        else rating = 'OVER PAR';
+
+                        document.getElementById('holeStats').innerHTML =
+                            `${rating}<br>Strokes: ${game.strokes}<br>Total: ${game.totalStrokes}`;
+                    }, 500);
+                }
+
+                // Stop if too slow
+                if (Math.abs(game.ball.vx) < 0.1 && Math.abs(game.ball.vy) < 0.1) {
+                    game.ball.vx = 0;
+                    game.ball.vy = 0;
+                    game.ball.moving = false;
+                }
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('hole').textContent = game.currentHole + 1;
+            document.getElementById('strokes').textContent = game.strokes;
+            document.getElementById('total').textContent = game.totalStrokes;
+        }
+
+        function render() {
+            // Grass
+            ctx.fillStyle = '#10b981';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Grass texture
+            ctx.fillStyle = 'rgba(5,150,105,0.3)';
+            for (let i = 0; i < 50; i++) {
+                const x = (i * 73) % canvas.width;
+                const y = (i * 97) % canvas.height;
+                ctx.fillRect(x, y, 2, 8);
+            }
+
+            // Obstacles
+            game.obstacles.forEach(obs => {
+                if (obs.type === 'wall') {
+                    ctx.fillStyle = '#8b4513';
+                    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                    ctx.strokeStyle = '#654321';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+                } else if (obs.type === 'sand') {
+                    ctx.fillStyle = '#f4e4c1';
+                    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                    // Sand texture
+                    ctx.fillStyle = 'rgba(218,186,144,0.3)';
+                    for (let i = 0; i < 20; i++) {
+                        ctx.fillRect(
+                            obs.x + Math.random() * obs.width,
+                            obs.y + Math.random() * obs.height,
+                            2, 2
+                        );
+                    }
+                } else if (obs.type === 'water') {
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                    // Water shimmer
+                    ctx.fillStyle = 'rgba(147,197,253,0.5)';
+                    const wave = Math.sin(Date.now() / 500) * 5;
+                    ctx.fillRect(obs.x, obs.y + wave, obs.width, obs.height / 3);
+                }
+            });
+
+            // Hole
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(game.hole.x, game.hole.y, game.hole.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Flag
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(game.hole.x, game.hole.y);
+            ctx.lineTo(game.hole.x, game.hole.y - 50);
+            ctx.stroke();
+
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.moveTo(game.hole.x, game.hole.y - 50);
+            ctx.lineTo(game.hole.x + 30, game.hole.y - 35);
+            ctx.lineTo(game.hole.x, game.hole.y - 20);
+            ctx.fill();
+
+            // Ball
+            if (game.ball) {
+                // Ball shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.ellipse(game.ball.x + 2, game.ball.y + 2, game.ball.radius, game.ball.radius * 0.6, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Ball
+                const ballGradient = ctx.createRadialGradient(
+                    game.ball.x - 3, game.ball.y - 3, 0,
+                    game.ball.x, game.ball.y, game.ball.radius
+                );
+                ballGradient.addColorStop(0, 'white');
+                ballGradient.addColorStop(1, '#f0f0f0');
+                ctx.fillStyle = ballGradient;
+                ctx.beginPath();
+                ctx.arc(game.ball.x, game.ball.y, game.ball.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Ball dimples
+                ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i * Math.PI * 2) / 8;
+                    ctx.beginPath();
+                    ctx.arc(
+                        game.ball.x + Math.cos(angle) * 4,
+                        game.ball.y + Math.sin(angle) * 4,
+                        1, 0, Math.PI * 2
+                    );
+                    ctx.fill();
+                }
+            }
+
+            // Aim line
+            if (game.aiming) {
+                const dx = game.ball.x - game.aimStart.x;
+                const dy = game.ball.y - game.aimStart.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const power = Math.min(dist / 50, 3);
+
+                ctx.strokeStyle = `rgba(255,255,255,${power / 3})`;
+                ctx.lineWidth = 5;
+                ctx.setLineDash([10, 10]);
+                ctx.beginPath();
+                ctx.moveTo(game.ball.x, game.ball.y);
+                ctx.lineTo(game.ball.x + dx, game.ball.y + dy);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Power indicator
+                ctx.fillStyle = 'white';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Power: ${Math.floor(power * 33)}%`, game.ball.x, game.ball.y - 20);
+            }
+        }
+
+        let lastTime = performance.now();
+        function gameLoop() {
+            const currentTime = performance.now();
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>
