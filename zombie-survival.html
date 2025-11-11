@@ -121,6 +121,77 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
+        // Sound System
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const sounds = {
+            shoot: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 200;
+                osc.type = 'square';
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.08);
+            },
+            zombieHit: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.frequency.setValueAtTime(250, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.15);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            },
+            zombieDie: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            },
+            playerHit: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 100;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            },
+            waveComplete: () => {
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.type = 'sine';
+                        osc.frequency.value = 400 + i * 200;
+                        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 0.3);
+                    }, i * 100);
+                }
+            }
+        };
+
         const game = {
             running: false,
             wave: 1,
@@ -134,7 +205,11 @@
             mouseY: 0,
             waveInProgress: false,
             zombiesThisWave: 0,
-            zombiesKilledThisWave: 0
+            zombiesKilledThisWave: 0,
+            shakeAmount: 0,
+            killPopups: [],
+            muzzleFlashes: [],
+            shellCasings: []
         };
 
         function startGame() {
@@ -213,20 +288,61 @@
             }
         });
 
+        function screenShake(amount = 10) {
+            game.shakeAmount = Math.max(game.shakeAmount, amount);
+        }
+
+        function createKillPopup(x, y) {
+            game.killPopups.push({
+                text: '+10',
+                x: x,
+                y: y,
+                vy: -2,
+                life: 1.0
+            });
+        }
+
         function shootBullet() {
             game.player.ammo--;
 
             const dx = game.mouseX - game.player.x;
             const dy = game.mouseY - game.player.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+
+            const bulletX = game.player.x + Math.cos(angle) * 20;
+            const bulletY = game.player.y + Math.sin(angle) * 20;
 
             game.bullets.push({
-                x: game.player.x,
-                y: game.player.y,
+                x: bulletX,
+                y: bulletY,
                 vx: (dx / dist) * 15,
                 vy: (dy / dist) * 15,
                 radius: 4
             });
+
+            // Muzzle flash
+            game.muzzleFlashes.push({
+                x: bulletX,
+                y: bulletY,
+                angle: angle,
+                life: 0.1,
+                size: 20
+            });
+
+            // Shell casing
+            game.shellCasings.push({
+                x: bulletX,
+                y: bulletY,
+                vx: Math.cos(angle + Math.PI/2) * 3 + (Math.random() - 0.5) * 2,
+                vy: Math.sin(angle + Math.PI/2) * 3 - 2,
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * 0.3,
+                life: 0.5
+            });
+
+            sounds.shoot();
+            screenShake(3);
         }
 
         function createParticles(x, y, color, count = 10) {
@@ -247,6 +363,10 @@
 
         function update(dt) {
             if (!game.running) return;
+
+            // Screen shake decay
+            game.shakeAmount *= 0.85;
+            if (game.shakeAmount < 0.1) game.shakeAmount = 0;
 
             // Player movement
             let dx = 0, dy = 0;
@@ -283,13 +403,17 @@
 
                     if (dist < zombie.radius + bullet.radius) {
                         zombie.health--;
-                        createParticles(bullet.x, bullet.y, '#00ff00', 5);
+                        createParticles(bullet.x, bullet.y, '#00ff00', 10);
+                        sounds.zombieHit();
 
                         if (zombie.health <= 0) {
                             game.kills++;
                             game.zombiesKilledThisWave++;
                             game.player.ammo += 2;
-                            createParticles(zombie.x, zombie.y, '#8B0000', 20);
+                            createParticles(zombie.x, zombie.y, '#8B0000', 30);
+                            createKillPopup(zombie.x, zombie.y - 30);
+                            sounds.zombieDie();
+                            screenShake(8);
                             game.zombies.splice(game.zombies.indexOf(zombie), 1);
                         }
                         return false;
@@ -312,7 +436,9 @@
                 // Check player collision
                 if (dist < zombie.radius + game.player.radius) {
                     game.player.health -= 10;
-                    createParticles(game.player.x, game.player.y, '#ff0000', 15);
+                    createParticles(game.player.x, game.player.y, '#ff0000', 20);
+                    sounds.playerHit();
+                    screenShake(15);
 
                     // Push zombie back
                     zombie.x -= (dx / dist) * 30;
@@ -334,12 +460,39 @@
                 return p.life > 0;
             });
 
+            // Update muzzle flashes
+            game.muzzleFlashes = game.muzzleFlashes.filter(flash => {
+                flash.life -= dt * 10;
+                return flash.life > 0;
+            });
+
+            // Update shell casings
+            game.shellCasings = game.shellCasings.filter(casing => {
+                casing.x += casing.vx;
+                casing.y += casing.vy;
+                casing.vy += 0.3; // gravity
+                casing.vx *= 0.98;
+                casing.vy *= 0.98;
+                casing.rotation += casing.rotationSpeed;
+                casing.life -= dt;
+                return casing.life > 0;
+            });
+
+            // Update kill popups
+            game.killPopups = game.killPopups.filter(popup => {
+                popup.y += popup.vy;
+                popup.vy *= 0.9;
+                popup.life -= dt;
+                return popup.life > 0;
+            });
+
             // Check wave complete
             if (game.waveInProgress && game.zombiesKilledThisWave >= game.zombiesThisWave && game.zombies.length === 0) {
                 game.waveInProgress = false;
                 game.wave++;
                 game.player.health = Math.min(100, game.player.health + 20);
                 game.player.ammo += 15;
+                sounds.waveComplete();
                 setTimeout(() => startWave(), 3000);
             }
 
@@ -361,6 +514,15 @@
         }
 
         function render() {
+            // Apply screen shake
+            ctx.save();
+            if (game.shakeAmount > 0) {
+                ctx.translate(
+                    (Math.random() - 0.5) * game.shakeAmount,
+                    (Math.random() - 0.5) * game.shakeAmount
+                );
+            }
+
             // Dark background
             ctx.fillStyle = '#0a0a0a';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -371,6 +533,34 @@
             vignette.addColorStop(1, 'rgba(0,0,0,0.7)');
             ctx.fillStyle = vignette;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Muzzle flashes
+            game.muzzleFlashes.forEach(flash => {
+                ctx.save();
+                ctx.translate(flash.x, flash.y);
+                ctx.rotate(flash.angle);
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, flash.size);
+                gradient.addColorStop(0, 'rgba(255,255,150,' + flash.life * 10 + ')');
+                gradient.addColorStop(0.5, 'rgba(255,200,100,' + flash.life * 5 + ')');
+                gradient.addColorStop(1, 'rgba(255,100,0,0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, flash.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Shell casings
+            game.shellCasings.forEach(casing => {
+                ctx.save();
+                ctx.translate(casing.x, casing.y);
+                ctx.rotate(casing.rotation);
+                ctx.fillStyle = '#FFD700';
+                ctx.globalAlpha = casing.life * 2;
+                ctx.fillRect(-3, -1.5, 6, 3);
+                ctx.globalAlpha = 1;
+                ctx.restore();
+            });
 
             // Particles
             game.particles.forEach(p => {
@@ -458,6 +648,20 @@
             ctx.lineTo(game.mouseX, game.mouseY + 10);
             ctx.stroke();
 
+            // Kill popups
+            game.killPopups.forEach(popup => {
+                ctx.save();
+                ctx.globalAlpha = popup.life;
+                ctx.font = 'bold 28px Arial';
+                ctx.fillStyle = '#00ff00';
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.textAlign = 'center';
+                ctx.strokeText(popup.text, popup.x, popup.y);
+                ctx.fillText(popup.text, popup.x, popup.y);
+                ctx.restore();
+            });
+
             // Wave complete message
             if (!game.waveInProgress && game.zombies.length === 0) {
                 ctx.fillStyle = '#00ff00';
@@ -470,6 +674,8 @@
                 ctx.fillText(`Next wave starting...`, canvas.width / 2, canvas.height / 2 + 40);
                 ctx.shadowBlur = 0;
             }
+
+            ctx.restore(); // End screen shake
         }
 
         let lastTime = performance.now();
