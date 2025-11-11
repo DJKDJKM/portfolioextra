@@ -12,7 +12,10 @@
       "Bash(git branch:*)",
       "Bash(git push:*)",
       "Bash(git commit:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(C:workspace20481solitaire.html)",
+      "Bash(git -C C:workspace20481 add -A)",
+      "Bash(git -C C:workspace20481 status)"
     ],
     "deny": [],
     "ask": []

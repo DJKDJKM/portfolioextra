@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze Runner - Endless Maze</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial Black', sans-serif;
+            background: linear-gradient(135deg, #141E30 0%, #243B55 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            background: #1a1a2e;
+            box-shadow: 0 0 50px rgba(0,255,255,0.3);
+            border-radius: 10px;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 600px;
+            pointer-events: none;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            color: white;
+            font-size: 24px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+        .hud-item {
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(0,255,255,0.6);
+        }
+        #startScreen, #gameOver {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+        }
+        #gameOver { display: none; }
+        h1 {
+            font-size: 64px;
+            color: #00ffff;
+            text-shadow: 0 0 20px rgba(0,255,255,0.8);
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 20px 50px;
+            font-size: 28px;
+            background: linear-gradient(45deg, #00ffff, #0088ff);
+            color: #000;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(0,255,255,0.4);
+        }
+        button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,255,255,0.6);
+        }
+        .instructions {
+            margin-top: 30px;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+        }
+        .key {
+            background: rgba(0,255,255,0.3);
+            padding: 8px 20px;
+            border-radius: 8px;
+            margin: 0 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="ui">
+        <div id="hud">
+            <div class="hud-item">DISTANCE: <span id="distance">0</span>m</div>
+            <div class="hud-item">COINS: <span id="coins">0</span></div>
+            <div class="hud-item">SPEED: <span id="speed">1</span>x</div>
+        </div>
+        <div id="startScreen">
+            <h1>🏃 MAZE RUNNER</h1>
+            <button onclick="startGame()">START RUNNING</button>
+            <div class="instructions">
+                <div style="margin: 20px 0;">
+                    <span class="key">←</span> <span class="key">→</span> Move Left/Right
+                </div>
+                <div>Run through the endless maze and collect coins!</div>
+            </div>
+        </div>
+        <div id="gameOver">
+            <h1>MAZE COMPLETE!</h1>
+            <div id="finalStats" style="color: white; font-size: 24px; margin: 20px 0;"></div>
+            <button onclick="restartGame()">RUN AGAIN</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const game = {
+            running: false,
+            distance: 0,
+            coins: 0,
+            speed: 3,
+            speedMultiplier: 1,
+            player: {
+                x: 400,
+                lane: 1,
+                targetLane: 1
+            },
+            walls: [],
+            coins: [],
+            cameraZ: 0,
+            lastSpawn: 0
+        };
+
+        const LANES = [250, 400, 550];
+        const LANE_WIDTH = 150;
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            game.running = true;
+            game.distance = 0;
+            game.coins = 0;
+            game.speed = 3;
+            game.speedMultiplier = 1;
+            game.player.lane = 1;
+            game.player.targetLane = 1;
+            game.player.x = LANES[1];
+            game.walls = [];
+            game.coins = [];
+            game.cameraZ = 0;
+            game.lastSpawn = 0;
+            gameLoop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            startGame();
+        }
+
+        document.addEventListener('keydown', e => {
+            if (!game.running) return;
+
+            if (e.key === 'ArrowLeft' && game.player.targetLane > 0) {
+                game.player.targetLane--;
+            } else if (e.key === 'ArrowRight' && game.player.targetLane < 2) {
+                game.player.targetLane++;
+            }
+        });
+
+        function spawnObstacles() {
+            const z = game.cameraZ + 1000;
+
+            // Randomly block 1-2 lanes
+            const blockedLanes = [];
+            const numBlocked = Math.random() > 0.5 ? 1 : 2;
+
+            for (let i = 0; i < numBlocked; i++) {
+                let lane;
+                do {
+                    lane = Math.floor(Math.random() * 3);
+                } while (blockedLanes.includes(lane));
+                blockedLanes.push(lane);
+
+                game.walls.push({
+                    lane: lane,
+                    z: z,
+                    height: 100 + Math.random() * 50
+                });
+            }
+
+            // Spawn coin in open lane
+            const openLanes = [0, 1, 2].filter(l => !blockedLanes.includes(l));
+            if (openLanes.length > 0) {
+                const coinLane = openLanes[Math.floor(Math.random() * openLanes.length)];
+                game.coins.push({
+                    lane: coinLane,
+                    z: z,
+                    collected: false
+                });
+            }
+        }
+
+        function update(dt) {
+            if (!game.running) return;
+
+            // Move forward
+            const moveSpeed = game.speed * game.speedMultiplier;
+            game.cameraZ += moveSpeed;
+            game.distance += moveSpeed * dt;
+
+            // Increase speed over time
+            game.speedMultiplier = 1 + Math.floor(game.distance / 500) * 0.1;
+
+            // Smooth lane changing
+            const targetX = LANES[game.player.targetLane];
+            game.player.x += (targetX - game.player.x) * dt * 10;
+            game.player.lane = game.player.targetLane;
+
+            // Spawn obstacles
+            if (game.cameraZ - game.lastSpawn > 300) {
+                spawnObstacles();
+                game.lastSpawn = game.cameraZ;
+            }
+
+            // Update walls
+            game.walls = game.walls.filter(wall => {
+                const screenZ = wall.z - game.cameraZ;
+
+                // Check collision
+                if (screenZ < 50 && screenZ > -50) {
+                    if (wall.lane === game.player.lane) {
+                        gameOver();
+                        return false;
+                    }
+                }
+
+                return screenZ > -100;
+            });
+
+            // Update coins
+            game.coins = game.coins.filter(coin => {
+                const screenZ = coin.z - game.cameraZ;
+
+                // Check collection
+                if (!coin.collected && screenZ < 50 && screenZ > -50) {
+                    if (coin.lane === game.player.lane) {
+                        coin.collected = true;
+                        game.coins++;
+                        return false;
+                    }
+                }
+
+                return screenZ > -100;
+            });
+
+            updateHUD();
+        }
+
+        function gameOver() {
+            game.running = false;
+            document.getElementById('gameOver').style.display = 'flex';
+            document.getElementById('finalStats').innerHTML =
+                `Distance: ${Math.floor(game.distance)}m<br>Coins: ${game.coins}<br>Speed: ${game.speedMultiplier.toFixed(1)}x`;
+        }
+
+        function updateHUD() {
+            document.getElementById('distance').textContent = Math.floor(game.distance);
+            document.getElementById('coins').textContent = game.coins;
+            document.getElementById('speed').textContent = game.speedMultiplier.toFixed(1);
+        }
+
+        function render() {
+            // Clear with perspective floor
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#0a0a1e');
+            gradient.addColorStop(1, '#1a1a2e');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw floor lines
+            ctx.strokeStyle = 'rgba(0,255,255,0.2)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 20; i++) {
+                const z = (i * 50 - (game.cameraZ % 50));
+                const screenY = 300 + 300 / (z / 100 + 1);
+                if (screenY < canvas.height) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, screenY);
+                    ctx.lineTo(canvas.width, screenY);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw lane dividers
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 3;
+            for (let lane = 0; lane <= 3; lane++) {
+                const x = 175 + lane * 150;
+                ctx.beginPath();
+                ctx.moveTo(x, 300);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+
+            // Draw walls
+            game.walls.forEach(wall => {
+                const screenZ = wall.z - game.cameraZ;
+                if (screenZ > 0) {
+                    const scale = 300 / (screenZ + 100);
+                    const screenX = LANES[wall.lane];
+                    const screenY = 300 + 300 / (screenZ / 100 + 1);
+                    const width = LANE_WIDTH * scale;
+                    const height = wall.height * scale;
+
+                    // Wall shadow
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.fillRect(screenX - width/2 + 5, screenY - height + 5, width, height);
+
+                    // Wall
+                    ctx.fillStyle = '#ff4444';
+                    ctx.fillRect(screenX - width/2, screenY - height, width, height);
+
+                    // Wall highlight
+                    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                    ctx.fillRect(screenX - width/2, screenY - height, width, height * 0.3);
+
+                    // Wall border
+                    ctx.strokeStyle = '#aa0000';
+                    ctx.lineWidth = 2 * scale;
+                    ctx.strokeRect(screenX - width/2, screenY - height, width, height);
+                }
+            });
+
+            // Draw coins
+            game.coins.forEach(coin => {
+                if (coin.collected) return;
+
+                const screenZ = coin.z - game.cameraZ;
+                if (screenZ > 0) {
+                    const scale = 300 / (screenZ + 100);
+                    const screenX = LANES[coin.lane];
+                    const screenY = 300 + 300 / (screenZ / 100 + 1);
+                    const radius = 20 * scale;
+
+                    // Coin glow
+                    ctx.shadowColor = '#FFD700';
+                    ctx.shadowBlur = 20 * scale;
+
+                    // Coin
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    ctx.arc(screenX, screenY - 50, radius, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.shadowBlur = 0;
+
+                    // Coin symbol
+                    ctx.fillStyle = '#FFA500';
+                    ctx.font = `${30 * scale}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('$', screenX, screenY - 50);
+                }
+            });
+
+            // Draw player
+            const playerY = 500;
+            const playerSize = 40;
+
+            // Player shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.beginPath();
+            ctx.arc(game.player.x + 3, playerY + 3, playerSize/2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Player body
+            ctx.fillStyle = '#00ffff';
+            ctx.beginPath();
+            ctx.arc(game.player.x, playerY, playerSize/2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Player glow
+            ctx.strokeStyle = '#00ffff';
+            ctx.lineWidth = 3;
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 20;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Player eyes
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(game.player.x - 8, playerY - 5, 3, 0, Math.PI * 2);
+            ctx.arc(game.player.x + 8, playerY - 5, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        let lastTime = performance.now();
+        function gameLoop() {
+            const currentTime = performance.now();
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            update(dt);
+            render();
+
+            if (game.running) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+    </script>
+</body>
+</html>
