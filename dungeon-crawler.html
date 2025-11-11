@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dungeon Crawler - Roguelike Adventure</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial Black', sans-serif;
+            background: linear-gradient(135deg, #2c1810 0%, #1a0f08 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            background: #1a1a1a;
+            box-shadow: 0 0 50px rgba(139,69,19,0.5);
+            border-radius: 10px;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 700px;
+            height: 700px;
+            pointer-events: none;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            color: white;
+            font-size: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+        .hud-item {
+            background: rgba(139,69,19,0.8);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(218,165,32,0.6);
+        }
+        #startScreen, #gameOver {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+        }
+        #gameOver { display: none; }
+        h1 {
+            font-size: 64px;
+            color: #DAA520;
+            text-shadow: 0 0 20px rgba(218,165,32,0.8);
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 20px 50px;
+            font-size: 28px;
+            background: linear-gradient(45deg, #8B4513, #A0522D);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(139,69,19,0.4);
+        }
+        button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(139,69,19,0.6);
+        }
+        .instructions {
+            margin-top: 30px;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="700" height="700"></canvas>
+    <div id="ui">
+        <div id="hud">
+            <div class="hud-item">FLOOR: <span id="floor">1</span></div>
+            <div class="hud-item">HP: <span id="hp">100</span></div>
+            <div class="hud-item">GOLD: <span id="gold">0</span></div>
+        </div>
+        <div id="startScreen">
+            <h1>⚔️ DUNGEON CRAWLER</h1>
+            <button onclick="startGame()">ENTER DUNGEON</button>
+            <div class="instructions">
+                <div style="margin: 20px 0;">
+                    WASD or Arrow Keys to move<br>
+                    Collect gold and find the exit<br>
+                    Avoid enemies or attack them!
+                </div>
+            </div>
+        </div>
+        <div id="gameOver">
+            <h1>GAME OVER!</h1>
+            <div id="finalStats" style="color: white; font-size: 24px; margin: 20px 0;"></div>
+            <button onclick="restartGame()">TRY AGAIN</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const TILE_SIZE = 50;
+        const GRID_SIZE = 14;
+
+        const game = {
+            running: false,
+            floor: 1,
+            player: null,
+            enemies: [],
+            gold: [],
+            exit: null,
+            map: [],
+            keys: {}
+        };
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            game.running = true;
+            game.floor = 1;
+
+            game.player = {
+                x: 1,
+                y: 1,
+                hp: 100,
+                maxHp: 100,
+                gold: 0
+            };
+
+            generateFloor();
+            gameLoop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            startGame();
+        }
+
+        function generateFloor() {
+            // Create empty map
+            game.map = [];
+            for (let y = 0; y < GRID_SIZE; y++) {
+                game.map[y] = [];
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    game.map[y][x] = (x === 0 || y === 0 || x === GRID_SIZE - 1 || y === GRID_SIZE - 1) ? 'wall' : 'floor';
+                }
+            }
+
+            // Add random walls
+            for (let i = 0; i < 30; i++) {
+                const x = 2 + Math.floor(Math.random() * (GRID_SIZE - 4));
+                const y = 2 + Math.floor(Math.random() * (GRID_SIZE - 4));
+                game.map[y][x] = 'wall';
+            }
+
+            // Reset player position
+            game.player.x = 1;
+            game.player.y = 1;
+
+            // Spawn enemies
+            game.enemies = [];
+            for (let i = 0; i < 3 + game.floor; i++) {
+                let x, y;
+                do {
+                    x = 2 + Math.floor(Math.random() * (GRID_SIZE - 4));
+                    y = 2 + Math.floor(Math.random() * (GRID_SIZE - 4));
+                } while (game.map[y][x] === 'wall' || (x === game.player.x && y === game.player.y));
+
+                game.enemies.push({
+                    x: x,
+                    y: y,
+                    hp: 20 + game.floor * 10,
+                    lastMove: 0
+                });
+            }
+
+            // Spawn gold
+            game.gold = [];
+            for (let i = 0; i < 5; i++) {
+                let x, y;
+                do {
+                    x = 2 + Math.floor(Math.random() * (GRID_SIZE - 4));
+                    y = 2 + Math.floor(Math.random() * (GRID_SIZE - 4));
+                } while (game.map[y][x] === 'wall');
+
+                game.gold.push({ x: x, y: y, amount: 10 + Math.floor(Math.random() * 20) });
+            }
+
+            // Spawn exit
+            do {
+                game.exit = {
+                    x: 2 + Math.floor(Math.random() * (GRID_SIZE - 4)),
+                    y: 2 + Math.floor(Math.random() * (GRID_SIZE - 4))
+                };
+            } while (game.map[game.exit.y][game.exit.x] === 'wall');
+        }
+
+        document.addEventListener('keydown', e => {
+            if (!game.running) return;
+
+            let newX = game.player.x;
+            let newY = game.player.y;
+
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') newY--;
+            else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') newY++;
+            else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') newX--;
+            else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') newX++;
+
+            if (newX !== game.player.x || newY !== game.player.y) {
+                if (game.map[newY] && game.map[newY][newX] !== 'wall') {
+                    game.player.x = newX;
+                    game.player.y = newY;
+
+                    // Check gold collection
+                    game.gold = game.gold.filter(g => {
+                        if (g.x === newX && g.y === newY) {
+                            game.player.gold += g.amount;
+                            return false;
+                        }
+                        return true;
+                    });
+
+                    // Check exit
+                    if (game.exit.x === newX && game.exit.y === newY) {
+                        game.floor++;
+                        game.player.hp = Math.min(game.player.maxHp, game.player.hp + 20);
+                        generateFloor();
+                    }
+
+                    // Check enemy collision (attack)
+                    game.enemies.forEach(enemy => {
+                        if (enemy.x === newX && enemy.y === newY) {
+                            enemy.hp -= 50;
+                            game.player.hp -= 10;
+                        }
+                    });
+
+                    // Remove dead enemies
+                    game.enemies = game.enemies.filter(e => e.hp > 0);
+
+                    // Move enemies
+                    moveEnemies();
+                }
+            }
+        });
+
+        function moveEnemies() {
+            game.enemies.forEach(enemy => {
+                const dx = game.player.x - enemy.x;
+                const dy = game.player.y - enemy.y;
+                const dist = Math.abs(dx) + Math.abs(dy);
+
+                if (dist < 5 && Math.random() > 0.3) {
+                    const newX = enemy.x + Math.sign(dx);
+                    const newY = enemy.y + Math.sign(dy);
+
+                    if (game.map[newY] && game.map[newY][newX] === 'floor') {
+                        enemy.x = newX;
+                        enemy.y = newY;
+
+                        if (enemy.x === game.player.x && enemy.y === game.player.y) {
+                            game.player.hp -= 15;
+                            if (game.player.hp <= 0) {
+                                gameOver();
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function update(dt) {
+            if (!game.running) return;
+            updateHUD();
+        }
+
+        function gameOver() {
+            game.running = false;
+            document.getElementById('gameOver').style.display = 'flex';
+            document.getElementById('finalStats').innerHTML =
+                `Floors Explored: ${game.floor}<br>Gold Collected: ${game.player.gold}`;
+        }
+
+        function updateHUD() {
+            document.getElementById('floor').textContent = game.floor;
+            document.getElementById('hp').textContent = Math.max(0, game.player.hp);
+            document.getElementById('gold').textContent = game.player.gold;
+        }
+
+        function render() {
+            // Background
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw map
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const tile = game.map[y][x];
+
+                    if (tile === 'wall') {
+                        ctx.fillStyle = '#4a4a4a';
+                        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        ctx.strokeStyle = '#2a2a2a';
+                        ctx.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    } else {
+                        ctx.fillStyle = '#2a2a2a';
+                        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+
+            // Draw gold
+            game.gold.forEach(g => {
+                ctx.fillStyle = '#FFD700';
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(g.x * TILE_SIZE + TILE_SIZE / 2, g.y * TILE_SIZE + TILE_SIZE / 2, 12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // Draw exit
+            ctx.fillStyle = '#00ff00';
+            ctx.shadowColor = '#00ff00';
+            ctx.shadowBlur = 15;
+            ctx.fillRect(game.exit.x * TILE_SIZE + 10, game.exit.y * TILE_SIZE + 10, TILE_SIZE - 20, TILE_SIZE - 20);
+            ctx.shadowBlur = 0;
+
+            // Draw enemies
+            game.enemies.forEach(enemy => {
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(enemy.x * TILE_SIZE + 10, enemy.y * TILE_SIZE + 10, TILE_SIZE - 20, TILE_SIZE - 20);
+
+                // Enemy eyes
+                ctx.fillStyle = '#ffff00';
+                ctx.fillRect(enemy.x * TILE_SIZE + 15, enemy.y * TILE_SIZE + 18, 8, 8);
+                ctx.fillRect(enemy.x * TILE_SIZE + 27, enemy.y * TILE_SIZE + 18, 8, 8);
+            });
+
+            // Draw player
+            ctx.fillStyle = '#0066ff';
+            ctx.fillRect(game.player.x * TILE_SIZE + 10, game.player.y * TILE_SIZE + 10, TILE_SIZE - 20, TILE_SIZE - 20);
+
+            // Player face
+            ctx.fillStyle = '#ffd700';
+            ctx.fillRect(game.player.x * TILE_SIZE + 20, game.player.y * TILE_SIZE + 15, 10, 10);
+        }
+
+        let lastTime = performance.now();
+        function gameLoop() {
+            const currentTime = performance.now();
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>

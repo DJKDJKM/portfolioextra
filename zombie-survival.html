@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zombie Survival - Wave Defense</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial Black', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d0000 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            background: #0a0a0a;
+            box-shadow: 0 0 50px rgba(139,0,0,0.5);
+            border-radius: 10px;
+            cursor: crosshair;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 600px;
+            pointer-events: none;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            color: white;
+            font-size: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+        .hud-item {
+            background: rgba(139,0,0,0.8);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,0,0,0.6);
+        }
+        #startScreen, #gameOver {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+        }
+        #gameOver { display: none; }
+        h1 {
+            font-size: 64px;
+            color: #8B0000;
+            text-shadow: 0 0 20px rgba(139,0,0,0.8);
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 20px 50px;
+            font-size: 28px;
+            background: linear-gradient(45deg, #8B0000, #DC143C);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(139,0,0,0.4);
+        }
+        button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(139,0,0,0.6);
+        }
+        .instructions {
+            margin-top: 30px;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="ui">
+        <div id="hud">
+            <div class="hud-item">WAVE: <span id="wave">1</span></div>
+            <div class="hud-item">HEALTH: <span id="health">100</span></div>
+            <div class="hud-item">AMMO: <span id="ammo">30</span></div>
+            <div class="hud-item">KILLS: <span id="kills">0</span></div>
+        </div>
+        <div id="startScreen">
+            <h1>🧟 ZOMBIE SURVIVAL</h1>
+            <button onclick="startGame()">START SURVIVING</button>
+            <div class="instructions">
+                <div style="margin: 20px 0;">
+                    Move with WASD<br>
+                    Aim and shoot with mouse<br>
+                    Survive the zombie waves!
+                </div>
+            </div>
+        </div>
+        <div id="gameOver">
+            <h1>YOU DIED!</h1>
+            <div id="finalStats" style="color: white; font-size: 24px; margin: 20px 0;"></div>
+            <button onclick="restartGame()">TRY AGAIN</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const game = {
+            running: false,
+            wave: 1,
+            kills: 0,
+            player: null,
+            zombies: [],
+            bullets: [],
+            particles: [],
+            keys: {},
+            mouseX: 0,
+            mouseY: 0,
+            waveInProgress: false,
+            zombiesThisWave: 0,
+            zombiesKilledThisWave: 0
+        };
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            game.running = true;
+            game.wave = 1;
+            game.kills = 0;
+
+            game.player = {
+                x: 400,
+                y: 300,
+                radius: 15,
+                health: 100,
+                ammo: 30,
+                speed: 4,
+                angle: 0
+            };
+
+            game.zombies = [];
+            game.bullets = [];
+            game.particles = [];
+            game.waveInProgress = false;
+
+            startWave();
+            gameLoop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            startGame();
+        }
+
+        function startWave() {
+            game.waveInProgress = true;
+            game.zombiesThisWave = 5 + game.wave * 3;
+            game.zombiesKilledThisWave = 0;
+
+            for (let i = 0; i < game.zombiesThisWave; i++) {
+                setTimeout(() => spawnZombie(), i * 1000);
+            }
+        }
+
+        function spawnZombie() {
+            const side = Math.floor(Math.random() * 4);
+            let x, y;
+
+            switch(side) {
+                case 0: x = Math.random() * canvas.width; y = -20; break;
+                case 1: x = canvas.width + 20; y = Math.random() * canvas.height; break;
+                case 2: x = Math.random() * canvas.width; y = canvas.height + 20; break;
+                case 3: x = -20; y = Math.random() * canvas.height; break;
+            }
+
+            game.zombies.push({
+                x: x,
+                y: y,
+                radius: 15,
+                speed: 1 + game.wave * 0.1,
+                health: 2 + Math.floor(game.wave / 3),
+                maxHealth: 2 + Math.floor(game.wave / 3)
+            });
+        }
+
+        document.addEventListener('keydown', e => game.keys[e.key] = true);
+        document.addEventListener('keyup', e => game.keys[e.key] = false);
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            game.mouseX = e.clientX - rect.left;
+            game.mouseY = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('click', () => {
+            if (game.running && game.player.ammo > 0) {
+                shootBullet();
+            }
+        });
+
+        function shootBullet() {
+            game.player.ammo--;
+
+            const dx = game.mouseX - game.player.x;
+            const dy = game.mouseY - game.player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            game.bullets.push({
+                x: game.player.x,
+                y: game.player.y,
+                vx: (dx / dist) * 15,
+                vy: (dy / dist) * 15,
+                radius: 4
+            });
+        }
+
+        function createParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 4;
+                game.particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color: color,
+                    life: 0.8,
+                    size: 3 + Math.random() * 5
+                });
+            }
+        }
+
+        function update(dt) {
+            if (!game.running) return;
+
+            // Player movement
+            let dx = 0, dy = 0;
+            if (game.keys['w'] || game.keys['W']) dy -= 1;
+            if (game.keys['s'] || game.keys['S']) dy += 1;
+            if (game.keys['a'] || game.keys['A']) dx -= 1;
+            if (game.keys['d'] || game.keys['D']) dx += 1;
+
+            if (dx !== 0 || dy !== 0) {
+                const len = Math.sqrt(dx * dx + dy * dy);
+                game.player.x += (dx / len) * game.player.speed;
+                game.player.y += (dy / len) * game.player.speed;
+            }
+
+            // Keep player in bounds
+            game.player.x = Math.max(20, Math.min(canvas.width - 20, game.player.x));
+            game.player.y = Math.max(20, Math.min(canvas.height - 20, game.player.y));
+
+            // Player aim angle
+            const aimDx = game.mouseX - game.player.x;
+            const aimDy = game.mouseY - game.player.y;
+            game.player.angle = Math.atan2(aimDy, aimDx);
+
+            // Update bullets
+            game.bullets = game.bullets.filter(bullet => {
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+
+                // Check zombie hits
+                for (let zombie of game.zombies) {
+                    const dx = bullet.x - zombie.x;
+                    const dy = bullet.y - zombie.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < zombie.radius + bullet.radius) {
+                        zombie.health--;
+                        createParticles(bullet.x, bullet.y, '#00ff00', 5);
+
+                        if (zombie.health <= 0) {
+                            game.kills++;
+                            game.zombiesKilledThisWave++;
+                            game.player.ammo += 2;
+                            createParticles(zombie.x, zombie.y, '#8B0000', 20);
+                            game.zombies.splice(game.zombies.indexOf(zombie), 1);
+                        }
+                        return false;
+                    }
+                }
+
+                return bullet.x > 0 && bullet.x < canvas.width &&
+                       bullet.y > 0 && bullet.y < canvas.height;
+            });
+
+            // Update zombies
+            game.zombies.forEach(zombie => {
+                const dx = game.player.x - zombie.x;
+                const dy = game.player.y - zombie.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                zombie.x += (dx / dist) * zombie.speed;
+                zombie.y += (dy / dist) * zombie.speed;
+
+                // Check player collision
+                if (dist < zombie.radius + game.player.radius) {
+                    game.player.health -= 10;
+                    createParticles(game.player.x, game.player.y, '#ff0000', 15);
+
+                    // Push zombie back
+                    zombie.x -= (dx / dist) * 30;
+                    zombie.y -= (dy / dist) * 30;
+
+                    if (game.player.health <= 0) {
+                        gameOver();
+                    }
+                }
+            });
+
+            // Update particles
+            game.particles = game.particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.95;
+                p.vy *= 0.95;
+                p.life -= dt * 2;
+                return p.life > 0;
+            });
+
+            // Check wave complete
+            if (game.waveInProgress && game.zombiesKilledThisWave >= game.zombiesThisWave && game.zombies.length === 0) {
+                game.waveInProgress = false;
+                game.wave++;
+                game.player.health = Math.min(100, game.player.health + 20);
+                game.player.ammo += 15;
+                setTimeout(() => startWave(), 3000);
+            }
+
+            updateHUD();
+        }
+
+        function gameOver() {
+            game.running = false;
+            document.getElementById('gameOver').style.display = 'flex';
+            document.getElementById('finalStats').innerHTML =
+                `Waves Survived: ${game.wave - 1}<br>Zombies Killed: ${game.kills}`;
+        }
+
+        function updateHUD() {
+            document.getElementById('wave').textContent = game.wave;
+            document.getElementById('health').textContent = Math.max(0, game.player.health);
+            document.getElementById('ammo').textContent = game.player.ammo;
+            document.getElementById('kills').textContent = game.kills;
+        }
+
+        function render() {
+            // Dark background
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Vignette effect
+            const vignette = ctx.createRadialGradient(400, 300, 200, 400, 300, 500);
+            vignette.addColorStop(0, 'rgba(0,0,0,0)');
+            vignette.addColorStop(1, 'rgba(0,0,0,0.7)');
+            ctx.fillStyle = vignette;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Particles
+            game.particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+
+            // Bullets
+            game.bullets.forEach(bullet => {
+                ctx.fillStyle = '#FFD700';
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // Zombies
+            game.zombies.forEach(zombie => {
+                // Zombie shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.beginPath();
+                ctx.arc(zombie.x + 2, zombie.y + 2, zombie.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Zombie body
+                ctx.fillStyle = '#2d5016';
+                ctx.beginPath();
+                ctx.arc(zombie.x, zombie.y, zombie.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Zombie eyes
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(zombie.x - 7, zombie.y - 5, 5, 5);
+                ctx.fillRect(zombie.x + 2, zombie.y - 5, 5, 5);
+
+                // Health bar
+                const barWidth = 30;
+                const healthPercent = zombie.health / zombie.maxHealth;
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(zombie.x - barWidth/2, zombie.y - 25, barWidth, 4);
+                ctx.fillStyle = healthPercent > 0.5 ? '#00ff00' : '#ff0000';
+                ctx.fillRect(zombie.x - barWidth/2, zombie.y - 25, barWidth * healthPercent, 4);
+            });
+
+            // Player
+            ctx.save();
+            ctx.translate(game.player.x, game.player.y);
+            ctx.rotate(game.player.angle);
+
+            // Player body
+            ctx.fillStyle = '#0066cc';
+            ctx.beginPath();
+            ctx.arc(0, 0, game.player.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Gun
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, -3, 20, 6);
+
+            ctx.restore();
+
+            // Aim line
+            ctx.strokeStyle = 'rgba(255,0,0,0.3)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(game.player.x, game.player.y);
+            ctx.lineTo(game.mouseX, game.mouseY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Crosshair
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(game.mouseX - 10, game.mouseY);
+            ctx.lineTo(game.mouseX + 10, game.mouseY);
+            ctx.moveTo(game.mouseX, game.mouseY - 10);
+            ctx.lineTo(game.mouseX, game.mouseY + 10);
+            ctx.stroke();
+
+            // Wave complete message
+            if (!game.waveInProgress && game.zombies.length === 0) {
+                ctx.fillStyle = '#00ff00';
+                ctx.font = 'bold 48px Arial';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = '#000';
+                ctx.shadowBlur = 10;
+                ctx.fillText('WAVE COMPLETE!', canvas.width / 2, canvas.height / 2);
+                ctx.font = 'bold 24px Arial';
+                ctx.fillText(`Next wave starting...`, canvas.width / 2, canvas.height / 2 + 40);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        let lastTime = performance.now();
+        function gameLoop() {
+            const currentTime = performance.now();
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            update(dt);
+            render();
+
+            if (game.running) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+    </script>
+</body>
+</html>
