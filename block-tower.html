@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Block Tower - Stacking Game</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial Black', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            background: #87CEEB;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 600px;
+            pointer-events: none;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            font-size: 36px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+        #startScreen, #gameOver {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+        }
+        #gameOver { display: none; }
+        h1 {
+            font-size: 48px;
+            color: #FFD700;
+            text-shadow: 0 0 20px rgba(255,215,0,0.8);
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 20px 50px;
+            font-size: 24px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(76,175,80,0.4);
+        }
+        button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(76,175,80,0.6);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <div id="ui">
+        <div id="hud">
+            HEIGHT: <span id="height">0</span>
+        </div>
+        <div id="startScreen">
+            <h1>🏗️ BLOCK TOWER</h1>
+            <button onclick="startGame()">START BUILDING</button>
+            <div style="color: white; margin-top: 20px; text-align: center;">
+                Click or press SPACE to drop blocks!<br>
+                Stack them as high as you can!
+            </div>
+        </div>
+        <div id="gameOver">
+            <h1>TOWER FELL!</h1>
+            <div id="finalHeight" style="color: white; font-size: 32px; margin: 20px 0;"></div>
+            <button onclick="restartGame()">BUILD AGAIN</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const game = {
+            running: false,
+            blocks: [],
+            currentBlock: null,
+            height: 0,
+            direction: 1,
+            speed: 3
+        };
+
+        const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE'];
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            game.running = true;
+            game.blocks = [];
+            game.height = 0;
+            game.speed = 3;
+
+            // First block (base)
+            game.blocks.push({
+                x: 100,
+                y: 550,
+                width: 200,
+                height: 40,
+                color: colors[0]
+            });
+
+            spawnBlock();
+            gameLoop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            startGame();
+        }
+
+        function spawnBlock() {
+            const lastBlock = game.blocks[game.blocks.length - 1];
+
+            game.currentBlock = {
+                x: game.direction > 0 ? 0 : 400,
+                y: lastBlock.y - 50,
+                width: Math.max(50, lastBlock.width - game.blocks.length * 2),
+                height: 40,
+                color: colors[game.blocks.length % colors.length],
+                vx: game.direction * game.speed
+            };
+
+            game.direction *= -1;
+        }
+
+        function dropBlock() {
+            if (!game.currentBlock) return;
+
+            const lastBlock = game.blocks[game.blocks.length - 1];
+            const currentBlock = game.currentBlock;
+
+            // Calculate overlap
+            const overlapLeft = Math.max(lastBlock.x, currentBlock.x);
+            const overlapRight = Math.min(lastBlock.x + lastBlock.width, currentBlock.x + currentBlock.width);
+            const overlapWidth = overlapRight - overlapLeft;
+
+            if (overlapWidth > 0) {
+                // Block lands successfully
+                const newBlock = {
+                    x: overlapLeft,
+                    y: currentBlock.y,
+                    width: overlapWidth,
+                    height: currentBlock.height,
+                    color: currentBlock.color
+                };
+
+                game.blocks.push(newBlock);
+                game.height++;
+                game.speed = Math.min(8, 3 + game.height * 0.1);
+
+                // Create falling debris
+                if (overlapLeft > currentBlock.x) {
+                    createDebris(currentBlock.x, currentBlock.y, overlapLeft - currentBlock.x, currentBlock.color);
+                }
+                if (overlapRight < currentBlock.x + currentBlock.width) {
+                    createDebris(overlapRight, currentBlock.y, currentBlock.x + currentBlock.width - overlapRight, currentBlock.color);
+                }
+
+                spawnBlock();
+            } else {
+                // Block missed completely
+                game.running = false;
+                setTimeout(() => gameOver(), 500);
+            }
+        }
+
+        function createDebris(x, y, width, color) {
+            // Simple visual feedback (not animated for simplicity)
+        }
+
+        function gameOver() {
+            document.getElementById('gameOver').style.display = 'flex';
+            document.getElementById('finalHeight').textContent = `Tower Height: ${game.height}`;
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === ' ' && game.running) {
+                dropBlock();
+            }
+        });
+
+        canvas.addEventListener('click', () => {
+            if (game.running) {
+                dropBlock();
+            }
+        });
+
+        function update(dt) {
+            if (!game.running) return;
+
+            if (game.currentBlock) {
+                game.currentBlock.x += game.currentBlock.vx;
+
+                // Bounce at edges
+                if (game.currentBlock.x <= 0 || game.currentBlock.x + game.currentBlock.width >= canvas.width) {
+                    game.currentBlock.vx *= -1;
+                    game.currentBlock.x = Math.max(0, Math.min(canvas.width - game.currentBlock.width, game.currentBlock.x));
+                }
+            }
+
+            updateHUD();
+        }
+
+        function updateHUD() {
+            document.getElementById('height').textContent = game.height;
+        }
+
+        function render() {
+            // Sky
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#E0F6FF');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Ground
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, 580, canvas.width, 20);
+
+            // Blocks
+            game.blocks.forEach((block, index) => {
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.fillRect(block.x + 3, block.y + 3, block.width, block.height);
+
+                // Block
+                ctx.fillStyle = block.color;
+                ctx.fillRect(block.x, block.y, block.width, block.height);
+
+                // Highlight
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.fillRect(block.x, block.y, block.width, block.height / 3);
+
+                // Border
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(block.x, block.y, block.width, block.height);
+            });
+
+            // Current block
+            if (game.currentBlock) {
+                const block = game.currentBlock;
+
+                ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                ctx.fillRect(block.x + 3, block.y + 3, block.width, block.height);
+
+                ctx.fillStyle = block.color;
+                ctx.fillRect(block.x, block.y, block.width, block.height);
+
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.fillRect(block.x, block.y, block.width, block.height / 3);
+
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(block.x, block.y, block.width, block.height);
+            }
+        }
+
+        let lastTime = performance.now();
+        function gameLoop() {
+            const currentTime = performance.now();
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archery Pro - Bow & Arrow</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            border: 3px solid #FFD700;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(255,215,0,0.3);
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 600px;
+            pointer-events: none;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            color: white;
+            font-size: 24px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+        .hud-item {
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,215,0,0.6);
+        }
+        #powerBar {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 30px;
+            background: rgba(0,0,0,0.8);
+            border-radius: 15px;
+            border: 3px solid #FFD700;
+            overflow: hidden;
+            display: none;
+        }
+        #powerFill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #FFD700, #FF4500);
+            width: 0%;
+        }
+        #startScreen, #gameOver {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+        }
+        #gameOver { display: none; }
+        h1 {
+            font-size: 64px;
+            color: #FFD700;
+            text-shadow: 0 0 20px rgba(255,215,0,0.8);
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 20px 50px;
+            font-size: 28px;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            color: #000;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(255,215,0,0.4);
+        }
+        button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(255,215,0,0.6);
+        }
+        .instructions {
+            margin-top: 30px;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="ui">
+        <div id="hud">
+            <div class="hud-item">SCORE: <span id="score">0</span></div>
+            <div class="hud-item">ARROWS: <span id="arrows">10</span></div>
+            <div class="hud-item">HITS: <span id="hits">0</span>/10</div>
+        </div>
+        <div id="powerBar">
+            <div id="powerFill"></div>
+        </div>
+        <div id="startScreen">
+            <h1>🏹 ARCHERY PRO</h1>
+            <button onclick="startGame()">START SHOOTING</button>
+            <div class="instructions">
+                <div style="margin: 20px 0;">
+                    Hold SPACE or CLICK to charge power, release to shoot!
+                </div>
+                <div>Hit the bullseye for maximum points!</div>
+            </div>
+        </div>
+        <div id="gameOver">
+            <h1>ROUND COMPLETE!</h1>
+            <div id="finalStats" style="color: white; font-size: 24px; margin: 20px 0;"></div>
+            <button onclick="restartGame()">SHOOT AGAIN</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const game = {
+            running: false,
+            score: 0,
+            arrows: 10,
+            hits: 0,
+            power: 0,
+            charging: false,
+            target: { x: 650, y: 300, radius: 100, moving: true, vy: 2 },
+            arrow: null
+        };
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            game.running = true;
+            game.score = 0;
+            game.arrows = 10;
+            game.hits = 0;
+            game.power = 0;
+            game.charging = false;
+            game.arrow = null;
+            game.target.y = 300;
+            gameLoop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            startGame();
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === ' ' && game.running && !game.charging && !game.arrow && game.arrows > 0) {
+                game.charging = true;
+                document.getElementById('powerBar').style.display = 'block';
+            }
+        });
+
+        document.addEventListener('keyup', e => {
+            if (e.key === ' ' && game.charging) {
+                shootArrow();
+            }
+        });
+
+        canvas.addEventListener('mousedown', () => {
+            if (game.running && !game.charging && !game.arrow && game.arrows > 0) {
+                game.charging = true;
+                document.getElementById('powerBar').style.display = 'block';
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (game.charging) {
+                shootArrow();
+            }
+        });
+
+        function shootArrow() {
+            game.charging = false;
+            game.arrows--;
+            document.getElementById('powerBar').style.display = 'none';
+
+            const speed = 5 + game.power * 10;
+            game.arrow = {
+                x: 50,
+                y: 300,
+                vx: speed,
+                vy: 0,
+                rotation: 0
+            };
+        }
+
+        function update(dt) {
+            if (!game.running) return;
+
+            // Charge power
+            if (game.charging) {
+                game.power = (game.power + dt * 2) % 1;
+            }
+
+            // Update arrow
+            if (game.arrow) {
+                game.arrow.x += game.arrow.vx;
+                game.arrow.vy += 0.2; // Gravity
+                game.arrow.y += game.arrow.vy;
+                game.arrow.rotation = Math.atan2(game.arrow.vy, game.arrow.vx);
+
+                // Check hit
+                const dx = game.arrow.x - game.target.x;
+                const dy = game.arrow.y - game.target.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < game.target.radius && game.arrow.x > game.target.x - game.target.radius) {
+                    const score = Math.floor((1 - dist / game.target.radius) * 100);
+                    game.score += score;
+                    game.hits++;
+                    game.arrow = null;
+
+                    if (game.arrows <= 0) {
+                        setTimeout(() => gameOver(), 500);
+                    }
+                } else if (game.arrow.x > canvas.width || game.arrow.y > canvas.height) {
+                    game.arrow = null;
+                    if (game.arrows <= 0) {
+                        setTimeout(() => gameOver(), 500);
+                    }
+                }
+            }
+
+            // Move target
+            if (game.target.moving) {
+                game.target.y += game.target.vy;
+                if (game.target.y - game.target.radius < 0 || game.target.y + game.target.radius > canvas.height) {
+                    game.target.vy *= -1;
+                }
+            }
+
+            updateHUD();
+        }
+
+        function gameOver() {
+            game.running = false;
+            const accuracy = Math.floor((game.hits / 10) * 100);
+            document.getElementById('gameOver').style.display = 'flex';
+            document.getElementById('finalStats').innerHTML =
+                `Final Score: ${game.score}<br>Hits: ${game.hits}/10<br>Accuracy: ${accuracy}%`;
+        }
+
+        function updateHUD() {
+            document.getElementById('score').textContent = game.score;
+            document.getElementById('arrows').textContent = game.arrows;
+            document.getElementById('hits').textContent = game.hits;
+            document.getElementById('powerFill').style.width = (game.power * 100) + '%';
+        }
+
+        function render() {
+            // Sky gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#E0F6FF');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Ground
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+
+            // Target stand
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(game.target.x - 5, game.target.y + game.target.radius, 10, 100);
+
+            // Target
+            const rings = [
+                { radius: 100, color: '#fff' },
+                { radius: 80, color: '#000' },
+                { radius: 60, color: '#4169E1' },
+                { radius: 40, color: '#FF0000' },
+                { radius: 20, color: '#FFD700' }
+            ];
+
+            rings.forEach(ring => {
+                ctx.fillStyle = ring.color;
+                ctx.beginPath();
+                ctx.arc(game.target.x, game.target.y, ring.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Arrow
+            if (game.arrow) {
+                ctx.save();
+                ctx.translate(game.arrow.x, game.arrow.y);
+                ctx.rotate(game.arrow.rotation);
+
+                // Arrow shaft
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(-30, -2, 30, 4);
+
+                // Arrow head
+                ctx.fillStyle = '#C0C0C0';
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-10, -5);
+                ctx.lineTo(-10, 5);
+                ctx.closePath();
+                ctx.fill();
+
+                // Feathers
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(-28, -4, 8, 2);
+                ctx.fillRect(-28, 2, 8, 2);
+
+                ctx.restore();
+            }
+
+            // Bow
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(50, 300, 40, -Math.PI * 0.7, Math.PI * 0.7);
+            ctx.stroke();
+
+            if (game.charging) {
+                ctx.strokeStyle = '#DDD';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(50, 260);
+                ctx.lineTo(50 - game.power * 30, 300);
+                ctx.lineTo(50, 340);
+                ctx.stroke();
+            }
+        }
+
+        let lastTime = performance.now();
+        function gameLoop() {
+            const currentTime = performance.now();
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            update(dt);
+            render();
+
+            if (game.running || game.arrow) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drift King - Drift Racing</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial Black', sans-serif;
+            background: linear-gradient(135deg, #434343 0%, #000000 100%);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        #gameCanvas {
+            background: #1a1a1a;
+            box-shadow: 0 0 50px rgba(255,0,0,0.5);
+            border-radius: 10px;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 600px;
+            pointer-events: none;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            color: white;
+            font-size: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        }
+        .hud-item {
+            background: rgba(255,0,0,0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,0,0,0.6);
+        }
+        #driftMeter {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 40px;
+            background: rgba(0,0,0,0.8);
+            border-radius: 20px;
+            border: 3px solid #FF0000;
+            overflow: hidden;
+        }
+        #driftFill {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FF0000);
+            width: 0%;
+            transition: width 0.2s;
+        }
+        #driftText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        #driftBonus {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #FFD700;
+            font-size: 36px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s;
+            text-shadow: 0 0 10px #FFD700;
+        }
+        #startScreen, #gameOver {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+        }
+        #gameOver { display: none; }
+        h1 {
+            font-size: 64px;
+            background: linear-gradient(45deg, #FF0000, #FFD700);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 20px 50px;
+            font-size: 28px;
+            background: linear-gradient(45deg, #FF0000, #FF4500);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(255,0,0,0.4);
+        }
+        button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(255,0,0,0.6);
+        }
+        .instructions {
+            margin-top: 30px;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+        }
+        .key {
+            background: rgba(255,0,0,0.5);
+            padding: 8px 20px;
+            border-radius: 8px;
+            margin: 0 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="ui">
+        <div id="hud">
+            <div class="hud-item">SCORE: <span id="score">0</span></div>
+            <div class="hud-item">COMBO: <span id="combo">0</span>x</div>
+            <div class="hud-item">CHECKPOINTS: <span id="checkpoints">0</span>/10</div>
+        </div>
+        <div id="driftMeter">
+            <div id="driftFill"></div>
+            <div id="driftText">DRIFT POWER</div>
+        </div>
+        <div id="driftBonus">+500 DRIFT BONUS!</div>
+        <div id="startScreen">
+            <h1>🏁 DRIFT KING</h1>
+            <button onclick="startGame()">START RACE</button>
+            <div class="instructions">
+                <div style="margin: 20px 0;">
+                    <span class="key">↑</span> Accelerate &nbsp;
+                    <span class="key">←</span> <span class="key">→</span> Drift &nbsp;
+                    <span class="key">↓</span> Brake
+                </div>
+                <div>Drift around corners to build multiplier and score points!</div>
+            </div>
+        </div>
+        <div id="gameOver">
+            <h1>RACE COMPLETE!</h1>
+            <div id="finalStats" style="color: white; font-size: 24px; margin: 20px 0;"></div>
+            <button onclick="restartGame()">RACE AGAIN</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const game = {
+            running: false,
+            score: 0,
+            combo: 1,
+            checkpoints: 0,
+            totalCheckpoints: 10,
+            car: {
+                x: 400,
+                y: 300,
+                angle: 0,
+                speed: 0,
+                drift: 0,
+                driftPower: 0
+            },
+            track: [],
+            cones: [],
+            keys: {}
+        };
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            game.running = true;
+            game.score = 0;
+            game.combo = 1;
+            game.checkpoints = 0;
+            game.car.x = 400;
+            game.car.y = 500;
+            game.car.angle = -Math.PI / 2;
+            game.car.speed = 0;
+            game.car.drift = 0;
+            game.car.driftPower = 0;
+
+            generateTrack();
+            gameLoop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            startGame();
+        }
+
+        function generateTrack() {
+            game.track = [];
+            game.cones = [];
+
+            for (let i = 0; i < 50; i++) {
+                const angle = (i / 50) * Math.PI * 6;
+                const radius = 200 + Math.sin(i * 0.5) * 50;
+                const x = 400 + Math.cos(angle) * radius;
+                const y = 300 + Math.sin(angle) * radius;
+                game.track.push({ x, y });
+
+                if (i % 5 === 0) {
+                    const outerX = 400 + Math.cos(angle) * (radius + 80);
+                    const outerY = 300 + Math.sin(angle) * (radius + 80);
+                    const innerX = 400 + Math.cos(angle) * (radius - 80);
+                    const innerY = 300 + Math.sin(angle) * (radius - 80);
+                    game.cones.push({ x: outerX, y: outerY, type: 'outer' });
+                    game.cones.push({ x: innerX, y: innerY, type: 'inner' });
+                }
+            }
+        }
+
+        document.addEventListener('keydown', e => game.keys[e.key] = true);
+        document.addEventListener('keyup', e => game.keys[e.key] = false);
+
+        function update(dt) {
+            if (!game.running) return;
+
+            const maxSpeed = 300;
+            const acceleration = 200;
+            const braking = 400;
+            const turnSpeed = 3;
+
+            // Acceleration
+            if (game.keys['ArrowUp']) {
+                game.car.speed = Math.min(maxSpeed, game.car.speed + acceleration * dt);
+            } else if (game.keys['ArrowDown']) {
+                game.car.speed = Math.max(0, game.car.speed - braking * dt);
+            } else {
+                game.car.speed = Math.max(0, game.car.speed - 100 * dt);
+            }
+
+            // Drifting
+            const turning = (game.keys['ArrowLeft'] ? -1 : 0) + (game.keys['ArrowRight'] ? 1 : 0);
+
+            if (turning !== 0 && game.car.speed > 100) {
+                game.car.drift += Math.abs(turning) * dt * 2;
+                game.car.driftPower = Math.min(100, game.car.driftPower + dt * 30);
+                game.car.angle += turning * turnSpeed * dt * (game.car.speed / maxSpeed);
+
+                if (game.car.drift > 0.5) {
+                    game.score += Math.floor(game.car.speed * game.combo * dt * 0.1);
+                }
+            } else {
+                game.car.drift = Math.max(0, game.car.drift - dt * 3);
+                if (game.car.driftPower >= 100) {
+                    game.combo = Math.min(10, game.combo + 1);
+                    game.score += 500 * game.combo;
+                    showDriftBonus();
+                }
+                game.car.driftPower = Math.max(0, game.car.driftPower - dt * 50);
+            }
+
+            // Movement
+            game.car.x += Math.cos(game.car.angle) * game.car.speed * dt;
+            game.car.y += Math.sin(game.car.angle) * game.car.speed * dt;
+
+            // Check checkpoints
+            const nearestTrack = game.track[game.checkpoints * 5];
+            if (nearestTrack) {
+                const dx = game.car.x - nearestTrack.x;
+                const dy = game.car.y - nearestTrack.y;
+                if (Math.sqrt(dx * dx + dy * dy) < 50) {
+                    game.checkpoints++;
+                    game.score += 1000;
+                    if (game.checkpoints >= game.totalCheckpoints) {
+                        gameOver(true);
+                    }
+                }
+            }
+
+            // Keep combo going
+            if (game.car.speed < 50 && game.combo > 1) {
+                game.combo = Math.max(1, game.combo - dt);
+            }
+
+            updateHUD();
+        }
+
+        function showDriftBonus() {
+            const bonus = document.getElementById('driftBonus');
+            bonus.textContent = `+${500 * game.combo} DRIFT BONUS!`;
+            bonus.style.opacity = 1;
+            setTimeout(() => bonus.style.opacity = 0, 1000);
+        }
+
+        function gameOver(won) {
+            game.running = false;
+            document.getElementById('gameOver').style.display = 'flex';
+            document.getElementById('finalStats').innerHTML =
+                `Final Score: ${game.score}<br>Max Combo: ${game.combo}x<br>Checkpoints: ${game.checkpoints}/${game.totalCheckpoints}`;
+        }
+
+        function updateHUD() {
+            document.getElementById('score').textContent = game.score;
+            document.getElementById('combo').textContent = game.combo.toFixed(1);
+            document.getElementById('checkpoints').textContent = game.checkpoints;
+            document.getElementById('driftFill').style.width = game.car.driftPower + '%';
+        }
+
+        function render() {
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw track
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 160;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            game.track.forEach((point, i) => {
+                if (i === 0) ctx.moveTo(point.x, point.y);
+                else ctx.lineTo(point.x, point.y);
+            });
+            ctx.stroke();
+
+            // Track lines
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([20, 20]);
+            ctx.beginPath();
+            game.track.forEach((point, i) => {
+                if (i === 0) ctx.moveTo(point.x, point.y);
+                else ctx.lineTo(point.x, point.y);
+            });
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Cones
+            game.cones.forEach(cone => {
+                ctx.fillStyle = cone.type === 'outer' ? '#FF4500' : '#FFD700';
+                ctx.beginPath();
+                ctx.moveTo(cone.x, cone.y - 10);
+                ctx.lineTo(cone.x - 8, cone.y + 10);
+                ctx.lineTo(cone.x + 8, cone.y + 10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // Checkpoint
+            if (game.checkpoints < game.totalCheckpoints) {
+                const checkpoint = game.track[game.checkpoints * 5];
+                if (checkpoint) {
+                    ctx.strokeStyle = '#00FF00';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.arc(checkpoint.x, checkpoint.y, 40, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.fillStyle = 'rgba(0,255,0,0.2)';
+                    ctx.fill();
+                }
+            }
+
+            // Drift marks
+            if (game.car.drift > 0.3) {
+                ctx.fillStyle = 'rgba(50,50,50,0.3)';
+                ctx.fillRect(game.car.x - 10, game.car.y - 5, 20, 10);
+            }
+
+            // Car
+            ctx.save();
+            ctx.translate(game.car.x, game.car.y);
+            ctx.rotate(game.car.angle + game.car.drift * 0.3);
+
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(-20, -10, 40, 20);
+            ctx.fillStyle = '#8B0000';
+            ctx.fillRect(-20, -8, 15, 16);
+            ctx.fillStyle = 'rgba(200,200,255,0.5)';
+            ctx.fillRect(-18, -6, 10, 12);
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(18, -10, 4, 4);
+            ctx.fillRect(18, 6, 4, 4);
+
+            ctx.restore();
+        }
+
+        let lastTime = performance.now();
+        function gameLoop() {
+            const currentTime = performance.now();
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            update(dt);
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>
