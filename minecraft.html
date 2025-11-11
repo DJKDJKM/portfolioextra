@@ -309,7 +309,7 @@
             mouse: { locked: false, dx: 0, dy: 0 },
             worldSize: { x: 50, y: 30, z: 50 },
             blockSize: 1,
-            renderDistance: 40,
+            renderDistance: 20,
             inventory: {
                 1: 999, 2: 999, 3: 999, 4: 999, 5: 999, 6: 999, 8: 0, 9: 0
             }
@@ -565,8 +565,8 @@
         }
 
         function raycast() {
-            const maxDistance = 5;
-            const step = 0.1;
+            const maxDistance = 6;
+            const step = 0.05; // Smaller step for more accuracy
 
             const dirX = Math.cos(game.player.yaw) * Math.cos(game.player.pitch);
             const dirY = Math.sin(game.player.pitch);
@@ -574,18 +574,22 @@
 
             let lastAir = null;
 
-            for (let d = 0; d < maxDistance; d += step) {
+            for (let d = 0.1; d < maxDistance; d += step) {
                 const x = game.player.x + dirX * d;
                 const y = game.player.y + 1.6 + dirY * d; // Eye level
                 const z = game.player.z + dirZ * d;
 
-                const block = getBlock(x, y, z);
+                const bx = Math.floor(x);
+                const by = Math.floor(y);
+                const bz = Math.floor(z);
+
+                const block = getBlock(bx, by, bz);
 
                 if (block !== BLOCK_TYPES.AIR.id) {
                     const result = {
-                        x: Math.floor(x),
-                        y: Math.floor(y),
-                        z: Math.floor(z)
+                        x: bx,
+                        y: by,
+                        z: bz
                     };
 
                     if (lastAir) {
@@ -598,11 +602,13 @@
                     return result;
                 }
 
-                lastAir = {
-                    x: Math.floor(x),
-                    y: Math.floor(y),
-                    z: Math.floor(z)
-                };
+                const newBlockPos = `${bx},${by},${bz}`;
+                const lastBlockPos = lastAir ? `${lastAir.x},${lastAir.y},${lastAir.z}` : null;
+
+                // Only update lastAir when we move to a new block position
+                if (newBlockPos !== lastBlockPos) {
+                    lastAir = { x: bx, y: by, z: bz };
+                }
             }
 
             return null;
@@ -687,37 +693,67 @@
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Get visible blocks
+            // Get visible blocks with optimizations
             const visibleBlocks = [];
             const px = Math.floor(game.player.x);
             const py = Math.floor(game.player.y);
             const pz = Math.floor(game.player.z);
 
+            // Reduce vertical range for better performance
+            const yMin = Math.max(0, py - 10);
+            const yMax = Math.min(game.worldSize.y, py + 10);
+
+            // Only check blocks within render distance and use circular culling
+            const renderDistSq = game.renderDistance * game.renderDistance;
+
             for (let x = px - game.renderDistance; x <= px + game.renderDistance; x++) {
                 for (let z = pz - game.renderDistance; z <= pz + game.renderDistance; z++) {
-                    for (let y = Math.max(0, py - 15); y <= Math.min(game.worldSize.y, py + 15); y++) {
+                    // Circular render distance check
+                    const distSq = (x - px) ** 2 + (z - pz) ** 2;
+                    if (distSq > renderDistSq) continue;
+
+                    for (let y = yMin; y <= yMax; y++) {
                         const block = getBlock(x, y, z);
                         if (block !== BLOCK_TYPES.AIR.id) {
-                            visibleBlocks.push({ x, y, z, type: block });
+                            // Only render if at least one face is exposed
+                            if (isBlockVisible(x, y, z)) {
+                                visibleBlocks.push({ x, y, z, type: block });
+                            }
                         }
                     }
                 }
             }
 
-            // Sort blocks by distance
+            // Sort blocks by distance (back to front)
             visibleBlocks.sort((a, b) => {
                 const distA = (a.x - game.player.x) ** 2 + (a.y - game.player.y) ** 2 + (a.z - game.player.z) ** 2;
                 const distB = (b.x - game.player.x) ** 2 + (b.y - game.player.y) ** 2 + (b.z - game.player.z) ** 2;
                 return distB - distA;
             });
 
+            // Limit rendered blocks for performance
+            const maxBlocks = 800;
+            const blocksToRender = visibleBlocks.slice(0, maxBlocks);
+
             // Render blocks
-            visibleBlocks.forEach(block => {
+            blocksToRender.forEach(block => {
                 renderBlock(block.x, block.y, block.z, block.type);
             });
 
             // Update UI
             updateUI();
+        }
+
+        function isBlockVisible(x, y, z) {
+            // Check if at least one adjacent block is air (exposed face)
+            return (
+                getBlock(x, y + 1, z) === BLOCK_TYPES.AIR.id ||
+                getBlock(x, y - 1, z) === BLOCK_TYPES.AIR.id ||
+                getBlock(x + 1, y, z) === BLOCK_TYPES.AIR.id ||
+                getBlock(x - 1, y, z) === BLOCK_TYPES.AIR.id ||
+                getBlock(x, y, z + 1) === BLOCK_TYPES.AIR.id ||
+                getBlock(x, y, z - 1) === BLOCK_TYPES.AIR.id
+            );
         }
 
         function renderBlock(x, y, z, type) {
@@ -756,94 +792,45 @@
             if (screenX + size < 0 || screenX - size > canvas.width) return; // Off screen
             if (screenY + size < 0 || screenY - size > canvas.height) return; // Off screen
 
-            ctx.save();
-
-            // Define cube vertices for isometric view
-            const halfSize = size / 2;
-
-            // Check which faces are visible
-            const topVisible = getBlock(x, y + 1, z) === BLOCK_TYPES.AIR.id;
-            const frontVisible = true; // Always draw front faces
-            const rightVisible = rx > 0;
-            const leftVisible = rx < 0;
-
-            // Distance fog
+            // Simplified rendering - just draw the main face with shading
             const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            const fogFactor = Math.max(0, Math.min(1, (game.renderDistance - distance) / game.renderDistance));
+            const brightness = Math.max(0.4, 1 - (distance / game.renderDistance) * 0.5);
 
-            // Draw faces in order: back to front for proper layering
-
-            // Top face (isometric view)
-            if (topVisible && ry < 0) {
-                ctx.fillStyle = applyFog(blockType.topColor || lightenColor(blockType.color, 30), fogFactor);
-                ctx.beginPath();
-                ctx.moveTo(screenX, screenY - halfSize);
-                ctx.lineTo(screenX + halfSize * 0.866, screenY - halfSize * 0.5);
-                ctx.lineTo(screenX, screenY);
-                ctx.lineTo(screenX - halfSize * 0.866, screenY - halfSize * 0.5);
-                ctx.closePath();
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(0,0,0,' + (0.3 * fogFactor) + ')';
-                ctx.lineWidth = Math.max(1, size * 0.02);
-                ctx.stroke();
+            // Determine face color based on orientation
+            let faceColor = blockType.color;
+            if (ry < -0.5 && getBlock(x, y + 1, z) === BLOCK_TYPES.AIR.id) {
+                // Top face visible
+                faceColor = blockType.topColor || lightenColor(blockType.color, 20);
+            } else if (rx > 0.3) {
+                // Right side
+                faceColor = lightenColor(blockType.color, 5);
+            } else if (rx < -0.3) {
+                // Left side
+                faceColor = darkenColor(blockType.color, 10);
             }
 
-            // Right face (if visible from angle)
-            if (rightVisible) {
-                ctx.fillStyle = applyFog(lightenColor(blockType.color, 10), fogFactor);
-                ctx.beginPath();
-                ctx.moveTo(screenX, screenY);
-                ctx.lineTo(screenX + halfSize * 0.866, screenY - halfSize * 0.5);
-                ctx.lineTo(screenX + halfSize * 0.866, screenY + halfSize * 0.5);
-                ctx.lineTo(screenX, screenY + size);
-                ctx.closePath();
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(0,0,0,' + (0.2 * fogFactor) + ')';
-                ctx.lineWidth = Math.max(1, size * 0.02);
-                ctx.stroke();
-            }
+            ctx.fillStyle = applyBrightness(faceColor, brightness);
+            ctx.fillRect(screenX - size / 2, screenY - size / 2, size, size);
 
-            // Left face (if visible from angle)
-            if (leftVisible) {
-                ctx.fillStyle = applyFog(darkenColor(blockType.color, 15), fogFactor);
-                ctx.beginPath();
-                ctx.moveTo(screenX, screenY);
-                ctx.lineTo(screenX - halfSize * 0.866, screenY - halfSize * 0.5);
-                ctx.lineTo(screenX - halfSize * 0.866, screenY + halfSize * 0.5);
-                ctx.lineTo(screenX, screenY + size);
-                ctx.closePath();
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(0,0,0,' + (0.2 * fogFactor) + ')';
-                ctx.lineWidth = Math.max(1, size * 0.02);
-                ctx.stroke();
-            }
-
-            // Front face (main visible face)
-            if (frontVisible) {
-                ctx.fillStyle = applyFog(blockType.color, fogFactor);
-                ctx.fillRect(screenX - halfSize, screenY - halfSize, size, size);
-                ctx.strokeStyle = 'rgba(0,0,0,' + (0.4 * fogFactor) + ')';
-                ctx.lineWidth = Math.max(1, size * 0.03);
-                ctx.strokeRect(screenX - halfSize, screenY - halfSize, size, size);
-            }
-
-            ctx.restore();
+            // Simple outline
+            ctx.strokeStyle = applyBrightness('#000000', brightness * 0.5);
+            ctx.lineWidth = Math.max(1, size * 0.02);
+            ctx.strokeRect(screenX - size / 2, screenY - size / 2, size, size);
         }
 
-        function applyFog(color, fogFactor) {
-            if (fogFactor >= 0.99) return color;
-
-            const skyColor = { r: 135, g: 206, b: 235 }; // Sky blue
-            const blockColor = hexToRgb(color);
-
-            const r = Math.floor(blockColor.r * fogFactor + skyColor.r * (1 - fogFactor));
-            const g = Math.floor(blockColor.g * fogFactor + skyColor.g * (1 - fogFactor));
-            const b = Math.floor(blockColor.b * fogFactor + skyColor.b * (1 - fogFactor));
-
+        function applyBrightness(color, brightness) {
+            const rgb = hexToRgb(color);
+            const r = Math.floor(rgb.r * brightness);
+            const g = Math.floor(rgb.g * brightness);
+            const b = Math.floor(rgb.b * brightness);
             return `rgb(${r}, ${g}, ${b})`;
         }
 
         function hexToRgb(hex) {
+            if (hex.startsWith('rgb')) {
+                const match = hex.match(/\d+/g);
+                return { r: parseInt(match[0]), g: parseInt(match[1]), b: parseInt(match[2]) };
+            }
             const num = parseInt(hex.replace('#', ''), 16);
             return {
                 r: (num >> 16) & 255,
