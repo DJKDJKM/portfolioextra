@@ -119,6 +119,78 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
+        // Sound System
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const sounds = {
+            laser: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            },
+            meteorHit: (size) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'square';
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.frequency.setValueAtTime(300 - size, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.15);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            },
+            meteorDestroy: (size) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.frequency.setValueAtTime(400 - size * 2, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            },
+            shieldHit: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 80;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            },
+            waveComplete: () => {
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.type = 'sine';
+                        osc.frequency.value = 500 + i * 200;
+                        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 0.2);
+                    }, i * 80);
+                }
+            }
+        };
+
         const game = {
             running: false,
             score: 0,
@@ -131,7 +203,10 @@
             mouseX: 400,
             mouseY: 550,
             lastShot: 0,
-            shootCooldown: 150
+            shootCooldown: 150,
+            shakeAmount: 0,
+            scorePopups: [],
+            laserTrails: []
         };
 
         function startGame() {
@@ -198,6 +273,21 @@
             game.mouseY = e.clientY - rect.top;
         });
 
+        function screenShake(amount = 10) {
+            game.shakeAmount = Math.max(game.shakeAmount, amount);
+        }
+
+        function createScorePopup(text, x, y) {
+            game.scorePopups.push({
+                text: text,
+                x: x,
+                y: y,
+                vy: -2,
+                life: 1.0,
+                scale: 1.5
+            });
+        }
+
         function shootLaser() {
             const now = Date.now();
             if (now - game.lastShot < game.shootCooldown) return;
@@ -210,6 +300,9 @@
                 speed: 15,
                 size: 5
             });
+
+            sounds.laser();
+            screenShake(2);
         }
 
         function createExplosion(x, y, size) {
@@ -232,6 +325,10 @@
         function update(dt) {
             if (!game.running) return;
 
+            // Screen shake decay
+            game.shakeAmount *= 0.9;
+            if (game.shakeAmount < 0.1) game.shakeAmount = 0;
+
             // Player follows mouse
             game.player.x += (game.mouseX - game.player.x) * 0.2;
             game.player.x = Math.max(20, Math.min(canvas.width - 20, game.player.x));
@@ -252,6 +349,13 @@
             game.lasers = game.lasers.filter(laser => {
                 laser.y -= laser.speed;
 
+                // Add laser trail
+                game.laserTrails.push({
+                    x: laser.x,
+                    y: laser.y,
+                    life: 0.3
+                });
+
                 // Check meteor hits
                 for (let meteor of game.meteors) {
                     const dx = laser.x - meteor.x;
@@ -260,11 +364,17 @@
 
                     if (dist < meteor.size / 2) {
                         meteor.health--;
-                        createExplosion(laser.x, laser.y, 10);
+                        createExplosion(laser.x, laser.y, 15);
+                        sounds.meteorHit(meteor.size);
+                        screenShake(5);
 
                         if (meteor.health <= 0) {
-                            game.score += Math.floor(meteor.size);
+                            const points = Math.floor(meteor.size);
+                            game.score += points;
                             createExplosion(meteor.x, meteor.y, meteor.size);
+                            createScorePopup('+' + points, meteor.x, meteor.y - 20);
+                            sounds.meteorDestroy(meteor.size);
+                            screenShake(10);
                             game.meteors.splice(game.meteors.indexOf(meteor), 1);
                         }
                         return false;
@@ -284,7 +394,9 @@
                     const dx = meteor.x - game.player.x;
                     if (Math.abs(dx) < meteor.size / 2 + 20) {
                         game.player.shields -= 20;
-                        createExplosion(meteor.x, meteor.y, meteor.size);
+                        createExplosion(meteor.x, meteor.y, meteor.size * 1.5);
+                        sounds.shieldHit();
+                        screenShake(20);
 
                         if (game.player.shields <= 0) {
                             gameOver();
@@ -305,10 +417,26 @@
                 return p.life > 0;
             });
 
+            // Update laser trails
+            game.laserTrails = game.laserTrails.filter(trail => {
+                trail.life -= dt * 3;
+                return trail.life > 0;
+            });
+
+            // Update score popups
+            game.scorePopups = game.scorePopups.filter(popup => {
+                popup.y += popup.vy;
+                popup.vy *= 0.95;
+                popup.life -= dt;
+                popup.scale = 1.5 + (1 - popup.life) * 0.5;
+                return popup.life > 0;
+            });
+
             // Check wave complete
             if (game.meteors.length === 0) {
                 game.wave++;
                 game.player.shields = Math.min(100, game.player.shields + 25);
+                sounds.waveComplete();
                 setTimeout(() => spawnWave(), 2000);
             }
 
@@ -329,6 +457,15 @@
         }
 
         function render() {
+            // Apply screen shake
+            ctx.save();
+            if (game.shakeAmount > 0) {
+                ctx.translate(
+                    (Math.random() - 0.5) * game.shakeAmount,
+                    (Math.random() - 0.5) * game.shakeAmount
+                );
+            }
+
             // Space background
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -340,6 +477,14 @@
                 ctx.fillRect(star.x, star.y, star.size, star.size);
                 ctx.globalAlpha = 1;
             });
+
+            // Laser trails
+            game.laserTrails.forEach((trail, i) => {
+                ctx.fillStyle = '#00ff00';
+                ctx.globalAlpha = trail.life * 0.5 * (i / game.laserTrails.length);
+                ctx.fillRect(trail.x - 1, trail.y - 5, 2, 10);
+            });
+            ctx.globalAlpha = 1;
 
             // Particles
             game.particles.forEach(p => {
@@ -435,6 +580,22 @@
 
             ctx.fillStyle = shieldPercent > 0.5 ? '#00ff00' : shieldPercent > 0.25 ? '#ffcc00' : '#ff0000';
             ctx.fillRect(game.player.x - barWidth / 2, game.player.y + 40, barWidth * shieldPercent, 8);
+
+            // Score popups
+            game.scorePopups.forEach(popup => {
+                ctx.save();
+                ctx.globalAlpha = popup.life;
+                ctx.font = `bold ${20 * popup.scale}px Arial`;
+                ctx.fillStyle = '#FFD700';
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.textAlign = 'center';
+                ctx.strokeText(popup.text, popup.x, popup.y);
+                ctx.fillText(popup.text, popup.x, popup.y);
+                ctx.restore();
+            });
+
+            ctx.restore(); // End screen shake
         }
 
         let lastTime = performance.now();

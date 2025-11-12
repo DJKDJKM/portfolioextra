@@ -122,6 +122,89 @@
         const TILE_SIZE = 50;
         const GRID_SIZE = 14;
 
+        // Sound System
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const sounds = {
+            step: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 80;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.05);
+            },
+            attack: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            },
+            enemyDie: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'square';
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.25);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.25);
+            },
+            collectGold: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = 800;
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            },
+            exitFloor: () => {
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.type = 'sine';
+                        osc.frequency.value = 500 + i * 150;
+                        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 0.2);
+                    }, i * 60);
+                }
+            },
+            playerHit: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 120;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            }
+        };
+
         const game = {
             running: false,
             floor: 1,
@@ -130,7 +213,10 @@
             gold: [],
             exit: null,
             map: [],
-            keys: {}
+            keys: {},
+            shakeAmount: 0,
+            popups: [],
+            particles: []
         };
 
         function startGame() {
@@ -214,6 +300,37 @@
             } while (game.map[game.exit.y][game.exit.x] === 'wall');
         }
 
+        function screenShake(amount = 10) {
+            game.shakeAmount = Math.max(game.shakeAmount, amount);
+        }
+
+        function createPopup(text, x, y, color) {
+            game.popups.push({
+                text: text,
+                x: x * TILE_SIZE + TILE_SIZE / 2,
+                y: y * TILE_SIZE,
+                vy: -1,
+                life: 1.0,
+                color: color
+            });
+        }
+
+        function createParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 3;
+                game.particles.push({
+                    x: x * TILE_SIZE + TILE_SIZE / 2,
+                    y: y * TILE_SIZE + TILE_SIZE / 2,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color: color,
+                    life: 0.8,
+                    size: 4 + Math.random() * 4
+                });
+            }
+        }
+
         document.addEventListener('keydown', e => {
             if (!game.running) return;
 
@@ -229,11 +346,15 @@
                 if (game.map[newY] && game.map[newY][newX] !== 'wall') {
                     game.player.x = newX;
                     game.player.y = newY;
+                    sounds.step();
 
                     // Check gold collection
                     game.gold = game.gold.filter(g => {
                         if (g.x === newX && g.y === newY) {
                             game.player.gold += g.amount;
+                            createPopup('+' + g.amount, g.x, g.y, '#FFD700');
+                            createParticles(g.x, g.y, '#FFD700', 15);
+                            sounds.collectGold();
                             return false;
                         }
                         return true;
@@ -243,6 +364,9 @@
                     if (game.exit.x === newX && game.exit.y === newY) {
                         game.floor++;
                         game.player.hp = Math.min(game.player.maxHp, game.player.hp + 20);
+                        createParticles(newX, newY, '#00ff00', 30);
+                        sounds.exitFloor();
+                        screenShake(10);
                         generateFloor();
                     }
 
@@ -251,10 +375,19 @@
                         if (enemy.x === newX && enemy.y === newY) {
                             enemy.hp -= 50;
                             game.player.hp -= 10;
+                            createParticles(enemy.x, enemy.y, '#ff0000', 20);
+                            createPopup('-10', newX, newY, '#ff0000');
+                            sounds.attack();
+                            screenShake(8);
                         }
                     });
 
                     // Remove dead enemies
+                    const deadCount = game.enemies.filter(e => e.hp <= 0).length;
+                    if (deadCount > 0) {
+                        sounds.enemyDie();
+                        screenShake(5);
+                    }
                     game.enemies = game.enemies.filter(e => e.hp > 0);
 
                     // Move enemies
@@ -279,6 +412,10 @@
 
                         if (enemy.x === game.player.x && enemy.y === game.player.y) {
                             game.player.hp -= 15;
+                            createParticles(game.player.x, game.player.y, '#ff0000', 15);
+                            createPopup('-15', game.player.x, game.player.y, '#ff0000');
+                            sounds.playerHit();
+                            screenShake(12);
                             if (game.player.hp <= 0) {
                                 gameOver();
                             }
@@ -290,6 +427,29 @@
 
         function update(dt) {
             if (!game.running) return;
+
+            // Screen shake decay
+            game.shakeAmount *= 0.85;
+            if (game.shakeAmount < 0.1) game.shakeAmount = 0;
+
+            // Update particles
+            game.particles = game.particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.95;
+                p.vy *= 0.95;
+                p.life -= dt * 1.5;
+                return p.life > 0;
+            });
+
+            // Update popups
+            game.popups = game.popups.filter(popup => {
+                popup.y += popup.vy;
+                popup.vy *= 0.9;
+                popup.life -= dt;
+                return popup.life > 0;
+            });
+
             updateHUD();
         }
 
@@ -307,6 +467,15 @@
         }
 
         function render() {
+            // Apply screen shake
+            ctx.save();
+            if (game.shakeAmount > 0) {
+                ctx.translate(
+                    (Math.random() - 0.5) * game.shakeAmount,
+                    (Math.random() - 0.5) * game.shakeAmount
+                );
+            }
+
             // Background
             ctx.fillStyle = '#0a0a0a';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -364,6 +533,32 @@
             // Player face
             ctx.fillStyle = '#ffd700';
             ctx.fillRect(game.player.x * TILE_SIZE + 20, game.player.y * TILE_SIZE + 15, 10, 10);
+
+            // Particles
+            game.particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+
+            // Popups
+            game.popups.forEach(popup => {
+                ctx.save();
+                ctx.globalAlpha = popup.life;
+                ctx.font = 'bold 20px Arial';
+                ctx.fillStyle = popup.color;
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.textAlign = 'center';
+                ctx.strokeText(popup.text, popup.x, popup.y);
+                ctx.fillText(popup.text, popup.x, popup.y);
+                ctx.restore();
+            });
+
+            ctx.restore(); // End screen shake
         }
 
         let lastTime = performance.now();
