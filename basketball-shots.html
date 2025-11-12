@@ -142,6 +142,60 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
+        // Sound System
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const sounds = {
+            bounce: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 150;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            },
+            swish: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            },
+            miss: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 100;
+                osc.type = 'sawtooth';
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            },
+            shoot: (power) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 200 + power * 100;
+                osc.type = 'square';
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            }
+        };
+
         const game = {
             running: false,
             score: 0,
@@ -151,7 +205,10 @@
             power: 0,
             angle: Math.PI / 4,
             ball: null,
-            hoop: { x: 500, y: 200, width: 100, height: 20 }
+            hoop: { x: 500, y: 200, width: 100, height: 20 },
+            shakeAmount: 0,
+            scorePopups: [],
+            particles: []
         };
 
         function startGame() {
@@ -208,6 +265,38 @@
             }
         });
 
+        function screenShake(amount = 10) {
+            game.shakeAmount = Math.max(game.shakeAmount, amount);
+        }
+
+        function createScorePopup(text, x, y, color = '#FFD700') {
+            game.scorePopups.push({
+                text: text,
+                x: x,
+                y: y,
+                vy: -2,
+                life: 1.2,
+                color: color,
+                scale: 1.5
+            });
+        }
+
+        function createParticles(x, y, color, count = 15) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 4;
+                game.particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color: color,
+                    life: 0.8,
+                    size: 3 + Math.random() * 5
+                });
+            }
+        }
+
         function shootBall() {
             if (!game.ball || game.shots <= 0) return;
 
@@ -218,11 +307,17 @@
             const speed = 10 + game.power * 10;
             game.ball.vx = Math.cos(game.angle) * speed;
             game.ball.vy = Math.sin(game.angle) * speed;
+            sounds.shoot(game.power);
+            screenShake(5);
             game.power = 0;
         }
 
         function update(dt) {
             if (!game.running) return;
+
+            // Screen shake decay
+            game.shakeAmount *= 0.9;
+            if (game.shakeAmount < 0.1) game.shakeAmount = 0;
 
             // Charge power
             if (game.charging) {
@@ -252,12 +347,21 @@
                         game.ball.vy > 0) {
 
                         game.ball.scored = true;
-                        game.score += 10 * (game.streak + 1);
+                        const points = 10 * (game.streak + 1);
+                        game.score += points;
                         game.streak++;
+
+                        createParticles(game.ball.x, game.ball.y, '#ff6600', 25);
+                        createScorePopup('+' + points, game.hoop.x, game.hoop.y - 30, '#FFD700');
+                        sounds.swish();
+                        screenShake(8);
 
                         // Perfect shot bonus
                         if (Math.abs(game.ball.x - game.hoop.x) < 10) {
                             game.score += 50;
+                            createScorePopup('PERFECT! +50', game.hoop.x, game.hoop.y - 60, '#00ff00');
+                            createParticles(game.ball.x, game.ball.y, '#FFD700', 40);
+                            screenShake(15);
                         }
                     }
                 }
@@ -268,6 +372,8 @@
 
                     if (!game.ball.scored) {
                         game.streak = 0;
+                        sounds.miss();
+                        createScorePopup('MISS!', game.hoop.x, game.hoop.y - 30, '#ff0000');
                     }
 
                     if (game.shots > 0) {
@@ -277,6 +383,26 @@
                     }
                 }
             }
+
+            // Update particles
+            game.particles = game.particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.3; // gravity
+                p.vx *= 0.98;
+                p.vy *= 0.98;
+                p.life -= dt * 1.5;
+                return p.life > 0;
+            });
+
+            // Update score popups
+            game.scorePopups = game.scorePopups.filter(popup => {
+                popup.y += popup.vy;
+                popup.vy *= 0.9;
+                popup.life -= dt;
+                popup.scale = 1.5 + (1 - popup.life) * 0.3;
+                return popup.life > 0;
+            });
 
             updateHUD();
         }
@@ -297,6 +423,15 @@
         }
 
         function render() {
+            // Apply screen shake
+            ctx.save();
+            if (game.shakeAmount > 0) {
+                ctx.translate(
+                    (Math.random() - 0.5) * game.shakeAmount,
+                    (Math.random() - 0.5) * game.shakeAmount
+                );
+            }
+
             // Sky gradient
             const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
             gradient.addColorStop(0, '#87CEEB');
