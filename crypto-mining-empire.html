@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Mining Empire - Idle Tycoon</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            overflow-x: hidden;
+            perspective: 1500px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #00ff00;
+            font-size: 56px;
+            text-shadow: 0 0 20px #00ff00, 4px 4px 8px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 20px #00ff00, 4px 4px 8px rgba(0,0,0,0.5); }
+            50% { text-shadow: 0 0 40px #00ff00, 0 0 60px #00ff00, 4px 4px 8px rgba(0,0,0,0.5); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(0,255,0,0.1);
+            border: 2px solid #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            transform-style: preserve-3d;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateZ(20px) rotateX(5deg);
+        }
+
+        .stat-label {
+            color: #00ff00;
+            font-size: 14px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .mining-floor {
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #00ff00;
+            border-radius: 15px;
+            padding: 30px;
+            min-height: 600px;
+            box-shadow: 0 0 40px rgba(0,255,0,0.3);
+        }
+
+        .floor-title {
+            color: #00ff00;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .rigs-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .mining-rig {
+            background: linear-gradient(145deg, #1a1a1a, #2a2a2a);
+            border: 2px solid #333;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            transform-style: preserve-3d;
+        }
+
+        .mining-rig:hover {
+            transform: translateZ(15px) rotateY(5deg);
+            border-color: #00ff00;
+            box-shadow: 0 0 30px rgba(0,255,0,0.5);
+        }
+
+        .mining-rig.active {
+            border-color: #00ff00;
+            background: linear-gradient(145deg, #0a3a0a, #0a5a0a);
+            animation: mine 1.5s infinite;
+        }
+
+        @keyframes mine {
+            0%, 100% { box-shadow: 0 0 10px rgba(0,255,0,0.3); }
+            50% { box-shadow: 0 0 30px rgba(0,255,0,0.8), inset 0 0 20px rgba(0,255,0,0.3); }
+        }
+
+        .rig-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+            animation: spin 3s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotateY(0deg); }
+            to { transform: rotateY(360deg); }
+        }
+
+        .rig-name {
+            color: #00ff00;
+            font-size: 16px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .rig-hashrate {
+            color: #00cc00;
+            font-size: 12px;
+        }
+
+        .mining-rig.inactive .rig-hashrate {
+            color: #666;
+        }
+
+        .blockchain-viz {
+            margin-top: 20px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 150px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .block {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: #00ff00;
+            margin: 5px;
+            border-radius: 5px;
+            animation: blockAppear 0.5s ease-out;
+            box-shadow: 0 0 15px #00ff00;
+            position: relative;
+        }
+
+        @keyframes blockAppear {
+            from {
+                transform: scale(0) rotate(0deg);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1) rotate(360deg);
+                opacity: 1;
+            }
+        }
+
+        .upgrade-panel {
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #00ff00;
+            border-radius: 15px;
+            padding: 30px;
+            max-height: 700px;
+            overflow-y: auto;
+            box-shadow: 0 0 40px rgba(0,255,0,0.3);
+        }
+
+        .panel-title {
+            color: #00ff00;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .upgrade-item {
+            background: linear-gradient(145deg, #1a1a1a, #2a2a2a);
+            border: 2px solid #333;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            transform-style: preserve-3d;
+        }
+
+        .upgrade-item:hover {
+            transform: translateZ(10px) scale(1.02);
+            border-color: #00ff00;
+            box-shadow: 0 0 20px rgba(0,255,0,0.4);
+        }
+
+        .upgrade-item.locked {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .upgrade-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .upgrade-icon {
+            font-size: 28px;
+        }
+
+        .upgrade-details {
+            flex: 1;
+            margin: 0 15px;
+        }
+
+        .upgrade-name {
+            color: #00ff00;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .upgrade-desc {
+            color: #888;
+            font-size: 12px;
+        }
+
+        .upgrade-price {
+            background: #00ff00;
+            color: #000;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .upgrade-count {
+            color: #666;
+            font-size: 11px;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.1;
+            z-index: -1;
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #00ff00;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00cc00;
+        }
+    </style>
+</head>
+<body>
+    <canvas class="matrix-bg" id="matrixCanvas"></canvas>
+
+    <div class="container">
+        <h1>₿ CRYPTO MINING EMPIRE</h1>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Coins</div>
+                <div class="stat-value" id="totalCoins">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Per Second</div>
+                <div class="stat-value" id="coinsPerSec">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Mined</div>
+                <div class="stat-value" id="totalMined">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Hash Power</div>
+                <div class="stat-value" id="hashPower">0 GH/s</div>
+            </div>
+        </div>
+
+        <div class="main-layout">
+            <div class="mining-floor">
+                <h2 class="floor-title">⚡ MINING RIGS</h2>
+
+                <div class="rigs-grid" id="rigsGrid">
+                    <div class="mining-rig inactive" id="rig0">
+                        <div class="rig-icon">💻</div>
+                        <div class="rig-name">CPU Miner</div>
+                        <div class="rig-hashrate">Offline</div>
+                    </div>
+                    <div class="mining-rig inactive" id="rig1">
+                        <div class="rig-icon">🖥️</div>
+                        <div class="rig-name">GPU Rig</div>
+                        <div class="rig-hashrate">Offline</div>
+                    </div>
+                    <div class="mining-rig inactive" id="rig2">
+                        <div class="rig-icon">🎮</div>
+                        <div class="rig-name">ASIC Miner</div>
+                        <div class="rig-hashrate">Offline</div>
+                    </div>
+                    <div class="mining-rig inactive" id="rig3">
+                        <div class="rig-icon">🏭</div>
+                        <div class="rig-name">Mining Farm</div>
+                        <div class="rig-hashrate">Offline</div>
+                    </div>
+                    <div class="mining-rig inactive" id="rig4">
+                        <div class="rig-icon">🌐</div>
+                        <div class="rig-name">Data Center</div>
+                        <div class="rig-hashrate">Offline</div>
+                    </div>
+                    <div class="mining-rig inactive" id="rig5">
+                        <div class="rig-icon">🛰️</div>
+                        <div class="rig-name">Quantum Miner</div>
+                        <div class="rig-hashrate">Offline</div>
+                    </div>
+                </div>
+
+                <h3 style="color: #00ff00; text-align: center; margin-bottom: 15px;">📊 BLOCKCHAIN</h3>
+                <div class="blockchain-viz" id="blockchain"></div>
+            </div>
+
+            <div class="upgrade-panel">
+                <h2 class="panel-title">🛒 UPGRADES</h2>
+                <div id="upgradesContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Matrix background
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const matrix = "01";
+        const fontSize = 16;
+        const columns = canvas.width / fontSize;
+        const drops = Array(Math.floor(columns)).fill(1);
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#00ff00';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = matrix[Math.floor(Math.random() * matrix.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        setInterval(drawMatrix, 50);
+
+        // Sound System
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const sounds = {
+            mine: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 200;
+                osc.type = 'square';
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            },
+            upgrade: () => {
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.frequency.value = 400 + i * 200;
+                        osc.type = 'sine';
+                        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 0.2);
+                    }, i * 50);
+                }
+            }
+        };
+
+        const game = {
+            coins: 0,
+            totalMined: 0,
+            coinsPerSecond: 0,
+            hashPower: 0,
+            upgrades: [
+                { name: 'CPU Miner', icon: '💻', cost: 10, owned: 0, cps: 0.1, hash: 0.01, desc: '0.1 coins/s' },
+                { name: 'GPU Rig', icon: '🖥️', cost: 100, owned: 0, cps: 1, hash: 0.1, desc: '1 coin/s' },
+                { name: 'ASIC Miner', icon: '🎮', cost: 1000, owned: 0, cps: 10, hash: 1, desc: '10 coins/s' },
+                { name: 'Mining Farm', icon: '🏭', cost: 10000, owned: 0, cps: 100, hash: 10, desc: '100 coins/s' },
+                { name: 'Data Center', icon: '🌐', cost: 100000, owned: 0, cps: 1000, hash: 100, desc: '1K coins/s' },
+                { name: 'Quantum Miner', icon: '🛰️', cost: 1000000, owned: 0, cps: 10000, hash: 1000, desc: '10K coins/s' }
+            ]
+        };
+
+        function formatNumber(num) {
+            if (num >= 1000000000) return (num / 1000000000).toFixed(2) + 'B';
+            if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(2) + 'K';
+            return Math.floor(num).toString();
+        }
+
+        function updateDisplay() {
+            document.getElementById('totalCoins').textContent = formatNumber(game.coins);
+            document.getElementById('coinsPerSec').textContent = formatNumber(game.coinsPerSecond);
+            document.getElementById('totalMined').textContent = formatNumber(game.totalMined);
+            document.getElementById('hashPower').textContent = game.hashPower.toFixed(2) + ' GH/s';
+
+            // Update rig status
+            game.upgrades.forEach((upgrade, i) => {
+                const rig = document.getElementById(`rig${i}`);
+                if (upgrade.owned > 0) {
+                    rig.classList.remove('inactive');
+                    rig.classList.add('active');
+                    rig.querySelector('.rig-hashrate').textContent = `x${upgrade.owned} | ${formatNumber(upgrade.cps * upgrade.owned)}/s`;
+                } else {
+                    rig.classList.add('inactive');
+                    rig.classList.remove('active');
+                    rig.querySelector('.rig-hashrate').textContent = 'Offline';
+                }
+            });
+        }
+
+        function renderShop() {
+            const container = document.getElementById('upgradesContainer');
+            container.innerHTML = '';
+
+            game.upgrades.forEach((upgrade, index) => {
+                const canAfford = game.coins >= upgrade.cost;
+                const upgradeDiv = document.createElement('div');
+                upgradeDiv.className = `upgrade-item ${!canAfford ? 'locked' : ''}`;
+                upgradeDiv.innerHTML = `
+                    <div class="upgrade-header">
+                        <div class="upgrade-icon">${upgrade.icon}</div>
+                        <div class="upgrade-details">
+                            <div class="upgrade-name">${upgrade.name}</div>
+                            <div class="upgrade-desc">${upgrade.desc} | ${upgrade.hash} GH/s</div>
+                        </div>
+                        <div class="upgrade-price">${formatNumber(upgrade.cost)}</div>
+                    </div>
+                    <div class="upgrade-count">Owned: ${upgrade.owned}</div>
+                `;
+
+                upgradeDiv.addEventListener('click', () => buyUpgrade(index));
+                container.appendChild(upgradeDiv);
+            });
+        }
+
+        function buyUpgrade(index) {
+            const upgrade = game.upgrades[index];
+            if (game.coins >= upgrade.cost) {
+                game.coins -= upgrade.cost;
+                upgrade.owned++;
+                upgrade.cost = Math.floor(upgrade.cost * 1.15);
+                game.coinsPerSecond += upgrade.cps;
+                game.hashPower += upgrade.hash;
+                sounds.upgrade();
+                updateDisplay();
+                renderShop();
+                spawnBlock();
+            }
+        }
+
+        function spawnBlock() {
+            const blockchain = document.getElementById('blockchain');
+            const block = document.createElement('div');
+            block.className = 'block';
+            blockchain.appendChild(block);
+
+            // Remove old blocks
+            if (blockchain.children.length > 20) {
+                blockchain.removeChild(blockchain.firstChild);
+            }
+        }
+
+        // Game loop
+        let lastBlock = 0;
+        function gameLoop() {
+            const now = Date.now();
+
+            // Passive income
+            game.coins += game.coinsPerSecond / 60;
+            game.totalMined += game.coinsPerSecond / 60;
+
+            // Spawn blocks
+            if (game.coinsPerSecond > 0 && now - lastBlock > 2000) {
+                spawnBlock();
+                sounds.mine();
+                lastBlock = now;
+            }
+
+            updateDisplay();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Auto-save
+        setInterval(() => {
+            localStorage.setItem('cryptoMining', JSON.stringify(game));
+        }, 5000);
+
+        // Load save
+        const saved = localStorage.getItem('cryptoMining');
+        if (saved) {
+            const data = JSON.parse(saved);
+            game.coins = data.coins || 0;
+            game.totalMined = data.totalMined || 0;
+            game.coinsPerSecond = 0;
+            game.hashPower = 0;
+            if (data.upgrades) {
+                data.upgrades.forEach((savedUpgrade, i) => {
+                    if (game.upgrades[i]) {
+                        game.upgrades[i].owned = savedUpgrade.owned || 0;
+                        game.upgrades[i].cost = savedUpgrade.cost || game.upgrades[i].cost;
+                        game.coinsPerSecond += game.upgrades[i].cps * game.upgrades[i].owned;
+                        game.hashPower += game.upgrades[i].hash * game.upgrades[i].owned;
+                    }
+                });
+            }
+        }
+
+        // Initialize
+        renderShop();
+        updateDisplay();
+        gameLoop();
+    </script>
+</body>
+</html>
