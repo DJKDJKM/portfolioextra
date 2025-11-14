@@ -15,7 +15,10 @@
       "Bash(git rm:*)",
       "Bash(C:workspace20481solitaire.html)",
       "Bash(git -C C:workspace20481 add -A)",
-      "Bash(git -C C:workspace20481 status)"
+      "Bash(git -C C:workspace20481 status)",
+      "Bash(node:*)",
+      "Bash(npx http-server -p 8000)",
+      "Bash(timeout 5 bash:*)"
     ],
     "deny": [],
     "ask": []
