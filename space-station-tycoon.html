@@ -319,6 +319,7 @@
 
         // Auto-save every 10 seconds
         setInterval(() => {
+            game.lastSave = Date.now();
             localStorage.setItem('spaceStationSave', JSON.stringify(game));
         }, 10000);
 
