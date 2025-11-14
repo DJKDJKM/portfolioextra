@@ -561,24 +561,34 @@
         });
 
         function buyTrain(index) {
+            console.log('buyTrain called! Index:', index);
             const train = game.trains[index];
+            console.log('Train:', train.name, 'Cost:', train.cost, 'Your money:', game.money);
             if (game.money >= train.cost) {
+                console.log('Can afford! Buying...');
                 game.money -= train.cost;
                 train.level++;
                 train.cost = Math.floor(train.cost * 1.15);
                 sounds.buy();
                 updateDisplay();
+            } else {
+                console.log('Cannot afford! Need:', train.cost, 'Have:', game.money);
             }
         }
 
         function buyStation(index) {
+            console.log('buyStation called! Index:', index);
             const station = game.stations[index];
+            console.log('Station:', station.name, 'Cost:', station.cost, 'Your money:', game.money);
             if (game.money >= station.cost) {
+                console.log('Can afford! Buying...');
                 game.money -= station.cost;
                 station.level++;
                 station.cost = Math.floor(station.cost * 1.2);
                 sounds.buy();
                 updateDisplay();
+            } else {
+                console.log('Cannot afford! Need:', station.cost, 'Have:', game.money);
             }
         }
 
@@ -647,7 +657,10 @@
                     </div>
                     <div class="upgrade-cost">Cost: ${formatMoney(train.cost)}</div>
                 `;
-                card.addEventListener('click', () => buyTrain(i));
+                card.addEventListener('click', () => {
+                    console.log('Train card clicked! Index:', i);
+                    buyTrain(i);
+                });
                 trainsGrid.appendChild(card);
             });
 
