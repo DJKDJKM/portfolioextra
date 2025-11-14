@@ -561,34 +561,24 @@
         });
 
         function buyTrain(index) {
-            console.log('buyTrain called! Index:', index);
             const train = game.trains[index];
-            console.log('Train:', train.name, 'Cost:', train.cost, 'Your money:', game.money);
             if (game.money >= train.cost) {
-                console.log('Can afford! Buying...');
                 game.money -= train.cost;
                 train.level++;
                 train.cost = Math.floor(train.cost * 1.15);
                 sounds.buy();
                 updateDisplay();
-            } else {
-                console.log('Cannot afford! Need:', train.cost, 'Have:', game.money);
             }
         }
 
         function buyStation(index) {
-            console.log('buyStation called! Index:', index);
             const station = game.stations[index];
-            console.log('Station:', station.name, 'Cost:', station.cost, 'Your money:', game.money);
             if (game.money >= station.cost) {
-                console.log('Can afford! Buying...');
                 game.money -= station.cost;
                 station.level++;
                 station.cost = Math.floor(station.cost * 1.2);
                 sounds.buy();
                 updateDisplay();
-            } else {
-                console.log('Cannot afford! Need:', station.cost, 'Have:', game.money);
             }
         }
 
@@ -623,6 +613,106 @@
             document.getElementById(tab + '-content').classList.add('active');
         }
 
+        function createCards() {
+            // Create train cards once
+            const trainsGrid = document.getElementById('trainsGrid');
+            trainsGrid.innerHTML = '';
+            game.trains.forEach((train, i) => {
+                const card = document.createElement('div');
+                card.className = 'upgrade-card';
+                card.dataset.index = i;
+                card.innerHTML = `
+                    <div class="upgrade-header">
+                        <div class="upgrade-icon">${train.icon}</div>
+                        <div class="upgrade-info">
+                            <div class="upgrade-name">${train.name}</div>
+                            <div class="upgrade-desc">${train.desc}</div>
+                        </div>
+                    </div>
+                    <div class="upgrade-stats">
+                        <div class="upgrade-level"></div>
+                        <div class="upgrade-production"></div>
+                    </div>
+                    <div class="upgrade-cost"></div>
+                `;
+                card.addEventListener('click', () => buyTrain(i));
+                trainsGrid.appendChild(card);
+            });
+
+            // Create station cards once
+            const stationsGrid = document.getElementById('stationsGrid');
+            stationsGrid.innerHTML = '';
+            game.stations.forEach((station, i) => {
+                const card = document.createElement('div');
+                card.className = 'upgrade-card';
+                card.dataset.index = i;
+                card.innerHTML = `
+                    <div class="upgrade-header">
+                        <div class="upgrade-icon">${station.icon}</div>
+                        <div class="upgrade-info">
+                            <div class="upgrade-name">${station.name}</div>
+                            <div class="upgrade-desc">${station.desc}</div>
+                        </div>
+                    </div>
+                    <div class="upgrade-stats">
+                        <div class="upgrade-level"></div>
+                        <div class="upgrade-production"></div>
+                    </div>
+                    <div class="upgrade-cost"></div>
+                `;
+                card.addEventListener('click', () => buyStation(i));
+                stationsGrid.appendChild(card);
+            });
+
+            // Create research cards once
+            const researchGrid = document.getElementById('researchGrid');
+            researchGrid.innerHTML = '';
+            game.research.forEach((research, i) => {
+                const card = document.createElement('div');
+                card.className = 'upgrade-card';
+                card.dataset.index = i;
+                card.innerHTML = `
+                    <div class="upgrade-header">
+                        <div class="upgrade-icon">${research.icon}</div>
+                        <div class="upgrade-info">
+                            <div class="upgrade-name">${research.name}</div>
+                            <div class="upgrade-desc">${research.desc}</div>
+                        </div>
+                    </div>
+                    <div class="upgrade-stats">
+                        <div class="upgrade-level"></div>
+                        <div class="upgrade-production"></div>
+                    </div>
+                    <div class="upgrade-cost"></div>
+                `;
+                card.addEventListener('click', () => buyResearch(i));
+                researchGrid.appendChild(card);
+            });
+
+            // Create route cards once
+            const routesContainer = document.getElementById('routesContainer');
+            routesContainer.innerHTML = '';
+            game.routes.forEach((route, i) => {
+                const div = document.createElement('div');
+                div.className = 'route-item';
+                div.dataset.index = i;
+                div.innerHTML = `
+                    <div class="route-header">
+                        <div>
+                            <span class="route-name">${route.icon} ${route.name}</span>
+                            <span class="multiplier-badge" style="display: none;"></span>
+                        </div>
+                        <span class="route-level"></span>
+                    </div>
+                    <div class="upgrade-desc">${route.desc}</div>
+                    <div class="route-income"></div>
+                    <div class="route-cost"></div>
+                `;
+                div.addEventListener('click', () => buyRoute(i));
+                routesContainer.appendChild(div);
+            });
+        }
+
         function updateDisplay() {
             game.moneyPerSecond = calculateIncome();
             const mult = calculateMultiplier();
@@ -634,113 +724,72 @@
             document.getElementById('passengers').textContent = formatNumber(game.totalPassengers);
             document.getElementById('cargo').textContent = formatNumber(game.totalCargo);
 
-            // Trains
+            // Update train cards
             const trainsGrid = document.getElementById('trainsGrid');
-            trainsGrid.innerHTML = '';
             game.trains.forEach((train, i) => {
+                const card = trainsGrid.children[i];
                 const canAfford = game.money >= train.cost;
                 const production = train.level > 0 ? formatMoney(train.level * train.baseMps * mult) + '/s' : '';
 
-                const card = document.createElement('div');
                 card.className = `upgrade-card ${!canAfford ? 'locked' : ''} ${train.level > 0 ? 'active' : ''}`;
-                card.innerHTML = `
-                    <div class="upgrade-header">
-                        <div class="upgrade-icon">${train.icon}</div>
-                        <div class="upgrade-info">
-                            <div class="upgrade-name">${train.name}</div>
-                            <div class="upgrade-desc">${train.desc}</div>
-                        </div>
-                    </div>
-                    <div class="upgrade-stats">
-                        <div class="upgrade-level">Level: ${train.level}</div>
-                        ${production ? `<div class="upgrade-production">Income: ${production}</div>` : ''}
-                    </div>
-                    <div class="upgrade-cost">Cost: ${formatMoney(train.cost)}</div>
-                `;
-                card.addEventListener('click', () => {
-                    console.log('Train card clicked! Index:', i);
-                    buyTrain(i);
-                });
-                trainsGrid.appendChild(card);
+                card.querySelector('.upgrade-level').textContent = `Level: ${train.level}`;
+                card.querySelector('.upgrade-production').innerHTML = production ? `Income: ${production}` : '';
+                card.querySelector('.upgrade-cost').textContent = `Cost: ${formatMoney(train.cost)}`;
             });
 
-            // Stations
+            // Update station cards
             const stationsGrid = document.getElementById('stationsGrid');
-            stationsGrid.innerHTML = '';
             game.stations.forEach((station, i) => {
+                const card = stationsGrid.children[i];
                 const canAfford = game.money >= station.cost;
 
-                const card = document.createElement('div');
                 card.className = `upgrade-card ${!canAfford ? 'locked' : ''} ${station.level > 0 ? 'active' : ''}`;
-                card.innerHTML = `
-                    <div class="upgrade-header">
-                        <div class="upgrade-icon">${station.icon}</div>
-                        <div class="upgrade-info">
-                            <div class="upgrade-name">${station.name}</div>
-                            <div class="upgrade-desc">${station.desc}</div>
-                        </div>
-                    </div>
-                    <div class="upgrade-stats">
-                        <div class="upgrade-level">Level: ${station.level}</div>
-                        <div class="upgrade-production">+${(station.multiplier * 100).toFixed(0)}% per level</div>
-                    </div>
-                    <div class="upgrade-cost">Cost: ${formatMoney(station.cost)}</div>
-                `;
-                card.addEventListener('click', () => buyStation(i));
-                stationsGrid.appendChild(card);
+                card.querySelector('.upgrade-level').textContent = `Level: ${station.level}`;
+                card.querySelector('.upgrade-production').textContent = `+${(station.multiplier * 100).toFixed(0)}% per level`;
+                card.querySelector('.upgrade-cost').textContent = `Cost: ${formatMoney(station.cost)}`;
             });
 
-            // Research
+            // Update research cards
             const researchGrid = document.getElementById('researchGrid');
-            researchGrid.innerHTML = '';
             game.research.forEach((research, i) => {
+                const card = researchGrid.children[i];
                 const canAfford = game.money >= research.cost;
 
-                const card = document.createElement('div');
                 card.className = `upgrade-card ${!canAfford ? 'locked' : ''} ${research.level > 0 ? 'active' : ''}`;
-                card.innerHTML = `
-                    <div class="upgrade-header">
-                        <div class="upgrade-icon">${research.icon}</div>
-                        <div class="upgrade-info">
-                            <div class="upgrade-name">${research.name}</div>
-                            <div class="upgrade-desc">${research.desc}</div>
-                        </div>
-                    </div>
-                    <div class="upgrade-stats">
-                        <div class="upgrade-level">Level: ${research.level}</div>
-                        <div class="upgrade-production">+${(research.multiplier * 100).toFixed(0)}% per level</div>
-                    </div>
-                    <div class="upgrade-cost">Cost: ${formatMoney(research.cost)}</div>
-                `;
-                card.addEventListener('click', () => buyResearch(i));
-                researchGrid.appendChild(card);
+                card.querySelector('.upgrade-level').textContent = `Level: ${research.level}`;
+                card.querySelector('.upgrade-production').textContent = `+${(research.multiplier * 100).toFixed(0)}% per level`;
+                card.querySelector('.upgrade-cost').textContent = `Cost: ${formatMoney(research.cost)}`;
             });
 
-            // Routes
+            // Update route cards
             const routesContainer = document.getElementById('routesContainer');
-            routesContainer.innerHTML = '';
             game.routes.forEach((route, i) => {
+                const div = routesContainer.children[i];
                 const canAfford = game.money >= route.cost;
                 const production = route.level > 0 ? formatMoney(route.level * route.baseMps * mult) + '/s' : '';
 
-                const div = document.createElement('div');
                 div.className = `route-item ${route.level > 0 ? 'active' : ''}`;
-                div.innerHTML = `
-                    <div class="route-header">
-                        <div>
-                            <span class="route-name">${route.icon} ${route.name}</span>
-                            ${mult > 1 ? `<span class="multiplier-badge">x${mult.toFixed(2)}</span>` : ''}
-                        </div>
-                        <span class="route-level">Lvl ${route.level}</span>
-                    </div>
-                    <div class="upgrade-desc">${route.desc}</div>
-                    ${production ? `<div class="route-income">${production}</div>` : ''}
-                    <div class="route-cost" style="${!canAfford ? 'opacity: 0.5;' : ''}">
-                        ${canAfford ? 'Buy' : 'Need'}: ${formatMoney(route.cost)}
-                    </div>
-                `;
-                div.addEventListener('click', () => buyRoute(i));
-                routesContainer.appendChild(div);
+                div.querySelector('.route-level').textContent = `Lvl ${route.level}`;
+
+                const multBadge = div.querySelector('.multiplier-badge');
+                if (mult > 1) {
+                    multBadge.textContent = `x${mult.toFixed(2)}`;
+                    multBadge.style.display = 'inline-block';
+                } else {
+                    multBadge.style.display = 'none';
+                }
+
+                const incomeDiv = div.querySelector('.route-income');
+                if (production) {
+                    incomeDiv.textContent = production;
+                    incomeDiv.style.display = 'block';
+                } else {
+                    incomeDiv.style.display = 'none';
+                }
+
+                const costDiv = div.querySelector('.route-cost');
+                costDiv.textContent = `${canAfford ? 'Buy' : 'Need'}: ${formatMoney(route.cost)}`;
+                costDiv.style.opacity = canAfford ? '1' : '0.5';
             });
         }
 
@@ -786,6 +835,7 @@
         }
 
         game.lastSave = Date.now();
+        createCards();
         updateDisplay();
     </script>
 </body>
