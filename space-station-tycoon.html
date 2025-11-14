@@ -3,495 +3,248 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Space Station Tycoon - 3D Idle Game</title>
+    <title>Space Station Tycoon</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Orbitron', 'Arial', sans-serif;
-            background: radial-gradient(ellipse at center, #1a1a2e 0%, #0f0f1e 100%);
-            overflow-x: hidden;
-            perspective: 2000px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
             color: white;
-        }
-
-        @keyframes stars {
-            from { transform: translateY(0px); }
-            to { transform: translateY(-2000px); }
-        }
-
-        .stars {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 200%;
-            background: transparent;
-            z-index: 0;
-            animation: stars 100s linear infinite;
-        }
-
-        .star {
-            position: absolute;
-            width: 2px;
-            height: 2px;
-            background: white;
-            border-radius: 50%;
-            box-shadow: 0 0 3px white;
+            min-height: 100vh;
+            padding: 20px;
         }
 
         .container {
-            max-width: 1600px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
-            position: relative;
-            z-index: 1;
         }
 
         h1 {
             text-align: center;
-            color: #00d4ff;
-            font-size: 64px;
-            text-shadow: 0 0 30px #00d4ff, 0 0 60px #0088ff;
-            margin-bottom: 10px;
-            animation: pulse 3s ease-in-out infinite;
+            font-size: 48px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 20px #00d4ff;
         }
 
-        @keyframes pulse {
-            0%, 100% { text-shadow: 0 0 30px #00d4ff, 0 0 60px #0088ff; }
-            50% { text-shadow: 0 0 50px #00d4ff, 0 0 90px #0088ff, 0 0 120px #0066ff; }
-        }
-
-        .stats-panel {
+        .stats {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
             margin-bottom: 30px;
         }
 
         .stat {
-            background: linear-gradient(145deg, rgba(0,212,255,0.1), rgba(0,136,255,0.1));
-            border: 2px solid #00d4ff;
-            border-radius: 15px;
-            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
             text-align: center;
-            box-shadow: 0 0 20px rgba(0,212,255,0.3);
-            transform: rotateX(10deg);
-            transition: transform 0.3s;
-        }
-
-        .stat:hover {
-            transform: rotateX(0deg) translateY(-5px);
-            box-shadow: 0 10px 40px rgba(0,212,255,0.5);
+            border: 2px solid rgba(0,212,255,0.3);
         }
 
         .stat-label {
-            color: #00d4ff;
             font-size: 12px;
-            text-transform: uppercase;
-            margin-bottom: 8px;
+            color: #aaa;
+            margin-bottom: 5px;
         }
 
         .stat-value {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: bold;
-            color: white;
+            color: #00d4ff;
         }
 
-        .main-grid {
+        .click-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .station-btn {
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #00d4ff, #0088ff);
+            border: 5px solid #00ffff;
+            font-size: 80px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 10px 40px rgba(0,212,255,0.5);
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .station-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 60px rgba(0,212,255,0.8);
+        }
+
+        .station-btn:active {
+            transform: scale(0.95);
+        }
+
+        .click-hint {
+            font-size: 18px;
+            color: #aaa;
+            margin-top: 15px;
+        }
+
+        .upgrades {
             display: grid;
-            grid-template-columns: 2.5fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
         }
 
-        .station-view {
-            background: linear-gradient(145deg, rgba(0,0,0,0.8), rgba(15,15,30,0.9));
-            border: 2px solid #00d4ff;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 0 40px rgba(0,212,255,0.3);
-            min-height: 700px;
-            position: relative;
-            transform-style: preserve-3d;
-        }
-
-        .station-title {
-            text-align: center;
-            color: #00d4ff;
-            font-size: 32px;
-            margin-bottom: 30px;
-            text-shadow: 0 0 15px #00d4ff;
-        }
-
-        .station-3d {
-            width: 100%;
-            height: 500px;
-            position: relative;
-            transform-style: preserve-3d;
-            perspective: 1000px;
-        }
-
-        .module-ring {
-            position: absolute;
-            width: 400px;
-            height: 400px;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%) rotateX(60deg);
-            transform-style: preserve-3d;
-            animation: rotate 30s linear infinite;
-        }
-
-        @keyframes rotate {
-            from { transform: translate(-50%, -50%) rotateX(60deg) rotateZ(0deg); }
-            to { transform: translate(-50%, -50%) rotateX(60deg) rotateZ(360deg); }
-        }
-
-        .module {
-            position: absolute;
-            width: 120px;
-            height: 120px;
-            background: linear-gradient(145deg, #1a1a2e, #2a2a4e);
-            border: 3px solid #00d4ff;
+        .upgrade {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
             border-radius: 15px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 0 20px rgba(0,212,255,0.3);
-        }
-
-        .module:hover {
-            transform: translateZ(30px) scale(1.1);
-            box-shadow: 0 0 40px rgba(0,212,255,0.8);
-            border-color: #00ffff;
-        }
-
-        .module.active {
-            background: linear-gradient(145deg, #003366, #0066cc);
-            border-color: #00ffff;
-            animation: moduleActive 2s infinite;
-        }
-
-        @keyframes moduleActive {
-            0%, 100% { box-shadow: 0 0 20px rgba(0,212,255,0.5); }
-            50% { box-shadow: 0 0 40px rgba(0,255,255,1), inset 0 0 20px rgba(0,212,255,0.5); }
-        }
-
-        .module-icon {
-            font-size: 40px;
-            margin-bottom: 8px;
-        }
-
-        .module-name {
-            font-size: 11px;
-            color: #00d4ff;
-            text-align: center;
-        }
-
-        .module-count {
-            font-size: 9px;
-            color: #888;
-            margin-top: 4px;
-        }
-
-        .module.active .module-count {
-            color: #00ffff;
-        }
-
-        /* Position modules in a circle */
-        .module:nth-child(1) { top: 0%; left: 50%; transform: translateX(-50%); }
-        .module:nth-child(2) { top: 14%; right: 14%; }
-        .module:nth-child(3) { top: 50%; right: 0%; transform: translateY(-50%); }
-        .module:nth-child(4) { bottom: 14%; right: 14%; }
-        .module:nth-child(5) { bottom: 0%; left: 50%; transform: translateX(-50%); }
-        .module:nth-child(6) { bottom: 14%; left: 14%; }
-        .module:nth-child(7) { top: 50%; left: 0%; transform: translateY(-50%); }
-        .module:nth-child(8) { top: 14%; left: 14%; }
-
-        .upgrades-sidebar {
-            background: linear-gradient(145deg, rgba(0,0,0,0.8), rgba(15,15,30,0.9));
-            border: 2px solid #00d4ff;
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 0 40px rgba(0,212,255,0.3);
-            max-height: 750px;
-            overflow-y: auto;
-        }
-
-        .sidebar-title {
-            text-align: center;
-            color: #00d4ff;
-            font-size: 24px;
-            margin-bottom: 20px;
-            text-shadow: 0 0 10px #00d4ff;
-        }
-
-        .upgrade-card {
-            background: linear-gradient(145deg, rgba(26,26,46,0.9), rgba(42,42,78,0.9));
             border: 2px solid rgba(0,212,255,0.3);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
             cursor: pointer;
             transition: all 0.3s;
-            transform-style: preserve-3d;
         }
 
-        .upgrade-card:hover {
-            transform: translateZ(15px) scale(1.02);
+        .upgrade:hover {
             border-color: #00d4ff;
-            box-shadow: 0 5px 25px rgba(0,212,255,0.5);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,212,255,0.4);
         }
 
-        .upgrade-card.locked {
-            opacity: 0.4;
+        .upgrade.locked {
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
-        .upgrade-top {
+        .upgrade-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            gap: 15px;
+            margin-bottom: 15px;
         }
 
         .upgrade-icon {
-            font-size: 36px;
+            font-size: 48px;
         }
 
         .upgrade-info {
             flex: 1;
-            margin: 0 12px;
         }
 
         .upgrade-name {
-            color: #00d4ff;
-            font-size: 15px;
+            font-size: 20px;
             font-weight: bold;
-            margin-bottom: 3px;
+            color: #00d4ff;
+            margin-bottom: 5px;
         }
 
         .upgrade-desc {
-            color: #888;
-            font-size: 11px;
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        .upgrade-stats {
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .upgrade-production {
+            color: #4caf50;
+            margin: 5px 0;
         }
 
         .upgrade-cost {
-            background: linear-gradient(145deg, #00d4ff, #0088ff);
+            background: #00d4ff;
             color: #000;
-            padding: 10px 15px;
+            padding: 10px 20px;
             border-radius: 8px;
             font-weight: bold;
-            font-size: 13px;
-            box-shadow: 0 0 15px rgba(0,212,255,0.5);
-        }
-
-        .upgrade-owned {
             text-align: center;
-            color: #666;
-            font-size: 11px;
-            margin-top: 8px;
+            margin-top: 10px;
         }
 
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.5);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #00d4ff;
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #00ffff;
-        }
-
-        .notification {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0);
-            background: linear-gradient(145deg, rgba(0,212,255,0.95), rgba(0,136,255,0.95));
-            color: white;
-            padding: 40px 60px;
-            border-radius: 20px;
-            border: 3px solid #00ffff;
-            box-shadow: 0 0 60px rgba(0,212,255,0.8);
-            z-index: 1000;
-            animation: notifAppear 0.4s ease-out forwards;
+        .section-title {
+            font-size: 28px;
+            margin: 30px 0 20px 0;
             text-align: center;
-        }
-
-        @keyframes notifAppear {
-            to { transform: translate(-50%, -50%) scale(1); }
-        }
-
-        .notification.hide {
-            animation: notifDisappear 0.3s ease-in forwards;
-        }
-
-        @keyframes notifDisappear {
-            to { transform: translate(-50%, -50%) scale(0); }
+            color: #00d4ff;
         }
     </style>
 </head>
 <body>
-    <div class="stars" id="starsContainer"></div>
-
     <div class="container">
-        <h1>🛸 SPACE STATION TYCOON</h1>
+        <h1>🛸 Space Station Tycoon</h1>
 
-        <div class="stats-panel">
+        <div class="stats">
             <div class="stat">
                 <div class="stat-label">Credits</div>
                 <div class="stat-value" id="credits">0</div>
             </div>
             <div class="stat">
                 <div class="stat-label">Per Second</div>
-                <div class="stat-value" id="creditsPerSec">0</div>
+                <div class="stat-value" id="perSec">0</div>
             </div>
             <div class="stat">
                 <div class="stat-label">Total Earned</div>
-                <div class="stat-value" id="totalEarned">0</div>
-            </div>
-            <div class="stat">
-                <div class="stat-label">Crew Members</div>
-                <div class="stat-value" id="crewCount">0</div>
-            </div>
-            <div class="stat">
-                <div class="stat-label">Power Output</div>
-                <div class="stat-value" id="powerOutput">0 MW</div>
+                <div class="stat-value" id="total">0</div>
             </div>
         </div>
 
-        <div class="main-grid">
-            <div class="station-view">
-                <h2 class="station-title">⭐ ORBITAL STATION ALPHA</h2>
-
-                <div class="station-3d">
-                    <div class="module-ring">
-                        <div class="module" id="mod0">
-                            <div class="module-icon">🔋</div>
-                            <div class="module-name">Solar Array</div>
-                            <div class="module-count">Offline</div>
-                        </div>
-                        <div class="module" id="mod1">
-                            <div class="module-icon">🏭</div>
-                            <div class="module-name">Mining Bay</div>
-                            <div class="module-count">Offline</div>
-                        </div>
-                        <div class="module" id="mod2">
-                            <div class="module-icon">🔬</div>
-                            <div class="module-name">Research Lab</div>
-                            <div class="module-count">Offline</div>
-                        </div>
-                        <div class="module" id="mod3">
-                            <div class="module-icon">🛠️</div>
-                            <div class="module-name">Factory</div>
-                            <div class="module-count">Offline</div>
-                        </div>
-                        <div class="module" id="mod4">
-                            <div class="module-icon">🏠</div>
-                            <div class="module-name">Hab Module</div>
-                            <div class="module-count">Offline</div>
-                        </div>
-                        <div class="module" id="mod5">
-                            <div class="module-icon">🚀</div>
-                            <div class="module-name">Dock Bay</div>
-                            <div class="module-count">Offline</div>
-                        </div>
-                        <div class="module" id="mod6">
-                            <div class="module-icon">💎</div>
-                            <div class="module-name">Trade Hub</div>
-                            <div class="module-count">Offline</div>
-                        </div>
-                        <div class="module" id="mod7">
-                            <div class="module-icon">⚡</div>
-                            <div class="module-name">Reactor</div>
-                            <div class="module-count">Offline</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="text-align: center; color: #00d4ff; margin-top: 30px; font-size: 18px;">
-                    🌌 Expand your station across the cosmos! 🌌
-                </div>
-            </div>
-
-            <div class="upgrades-sidebar">
-                <h2 class="sidebar-title">🔧 MODULES</h2>
-                <div id="upgradesContainer"></div>
-            </div>
+        <div class="click-section">
+            <button class="station-btn" id="clickBtn">🛰️</button>
+            <div class="click-hint">Click the station to earn credits!</div>
         </div>
+
+        <h2 class="section-title">🔧 Station Modules</h2>
+        <div class="upgrades" id="upgrades"></div>
     </div>
 
     <script>
-        // Create star field
-        const starsContainer = document.getElementById('starsContainer');
-        for (let i = 0; i < 200; i++) {
-            const star = document.createElement('div');
-            star.className = 'star';
-            star.style.left = Math.random() * 100 + '%';
-            star.style.top = Math.random() * 200 + '%';
-            star.style.animationDelay = Math.random() * 100 + 's';
-            starsContainer.appendChild(star);
-        }
-
-        // Sound System
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
         const sounds = {
-            build: () => {
-                for (let i = 0; i < 4; i++) {
-                    setTimeout(() => {
-                        const osc = audioCtx.createOscillator();
-                        const gain = audioCtx.createGain();
-                        osc.connect(gain);
-                        gain.connect(audioCtx.destination);
-                        osc.frequency.value = 300 + i * 150;
-                        osc.type = 'sine';
-                        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-                        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                        osc.start();
-                        osc.stop(audioCtx.currentTime + 0.2);
-                    }, i * 40);
-                }
-            },
-            ambient: () => {
+            click: () => {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
-                osc.frequency.value = 150;
+                osc.frequency.value = 800;
                 osc.type = 'sine';
-                gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.5);
+                osc.stop(audioCtx.currentTime + 0.1);
+            },
+            buy: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.2);
+                osc.type = 'square';
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
             }
         };
 
         const game = {
-            credits: 0,
+            credits: 10,
             totalEarned: 0,
             creditsPerSecond: 0,
-            crewCount: 0,
-            powerOutput: 0,
+            clickPower: 1,
             modules: [
-                { name: 'Solar Array', icon: '🔋', cost: 15, owned: 0, cps: 0.2, power: 0.5, crew: 0, desc: '0.2 credits/s' },
-                { name: 'Mining Bay', icon: '🏭', cost: 100, owned: 0, cps: 1, power: 2, crew: 2, desc: '1 credit/s' },
-                { name: 'Research Lab', icon: '🔬', cost: 500, owned: 0, cps: 5, power: 5, crew: 5, desc: '5 credits/s' },
-                { name: 'Factory', icon: '🛠️', cost: 2000, owned: 0, cps: 20, power: 10, crew: 10, desc: '20 credits/s' },
-                { name: 'Hab Module', icon: '🏠', cost: 10000, owned: 0, cps: 100, power: 15, crew: 25, desc: '100 credits/s' },
-                { name: 'Dock Bay', icon: '🚀', cost: 50000, owned: 0, cps: 500, power: 25, crew: 50, desc: '500 credits/s' },
-                { name: 'Trade Hub', icon: '💎', cost: 250000, owned: 0, cps: 2500, power: 50, crew: 100, desc: '2.5K credits/s' },
-                { name: 'Reactor', icon: '⚡', cost: 1000000, owned: 0, cps: 10000, power: 200, crew: 200, desc: '10K credits/s' }
+                { name: 'Solar Panel', icon: '☀️', cost: 10, owned: 0, cps: 0.5, desc: 'Basic power generation' },
+                { name: 'Mining Drone', icon: '⛏️', cost: 50, owned: 0, cps: 2, desc: 'Automated resource gathering' },
+                { name: 'Science Lab', icon: '🔬', cost: 200, owned: 0, cps: 8, desc: 'Research boosts income' },
+                { name: 'Factory Module', icon: '🏭', cost: 800, owned: 0, cps: 32, desc: 'Produces goods' },
+                { name: 'Crew Quarters', icon: '🏠', cost: 3000, owned: 0, cps: 120, desc: 'More crew = more output' },
+                { name: 'Trade Depot', icon: '💰', cost: 12000, owned: 0, cps: 480, desc: 'Interstellar commerce' },
+                { name: 'Fusion Reactor', icon: '⚡', cost: 50000, owned: 0, cps: 2000, desc: 'Massive power source' },
+                { name: 'AI Core', icon: '🤖', cost: 200000, owned: 0, cps: 8000, desc: 'Automated everything' },
+                { name: 'Warp Gate', icon: '🌀', cost: 800000, owned: 0, cps: 32000, desc: 'Connects galaxies' },
+                { name: 'Dyson Sphere', icon: '🌞', cost: 3200000, owned: 0, cps: 128000, desc: 'Harness star energy' }
             ]
         };
 
@@ -503,129 +256,104 @@
             return Math.floor(num).toString();
         }
 
-        function updateDisplay() {
-            document.getElementById('credits').textContent = formatNumber(game.credits);
-            document.getElementById('creditsPerSec').textContent = formatNumber(game.creditsPerSecond);
-            document.getElementById('totalEarned').textContent = formatNumber(game.totalEarned);
-            document.getElementById('crewCount').textContent = game.crewCount;
-            document.getElementById('powerOutput').textContent = game.powerOutput.toFixed(1);
-
-            // Update module status
-            game.modules.forEach((module, i) => {
-                const modElement = document.getElementById(`mod${i}`);
-                if (module.owned > 0) {
-                    modElement.classList.add('active');
-                    modElement.querySelector('.module-count').textContent = `x${module.owned}`;
-                } else {
-                    modElement.classList.remove('active');
-                    modElement.querySelector('.module-count').textContent = 'Offline';
-                }
-            });
-        }
-
-        function renderUpgrades() {
-            const container = document.getElementById('upgradesContainer');
-            container.innerHTML = '';
-
-            game.modules.forEach((module, index) => {
-                const canAfford = game.credits >= module.cost;
-                const card = document.createElement('div');
-                card.className = `upgrade-card ${!canAfford ? 'locked' : ''}`;
-                card.innerHTML = `
-                    <div class="upgrade-top">
-                        <div class="upgrade-icon">${module.icon}</div>
-                        <div class="upgrade-info">
-                            <div class="upgrade-name">${module.name}</div>
-                            <div class="upgrade-desc">${module.desc} | +${module.crew} crew</div>
-                        </div>
-                        <div class="upgrade-cost">${formatNumber(module.cost)}</div>
-                    </div>
-                    <div class="upgrade-owned">Owned: ${module.owned} | Power: ${module.power} MW</div>
-                `;
-
-                card.addEventListener('click', () => buyModule(index));
-                container.appendChild(card);
-            });
-        }
+        document.getElementById('clickBtn').addEventListener('click', () => {
+            game.credits += game.clickPower;
+            game.totalEarned += game.clickPower;
+            sounds.click();
+            updateDisplay();
+        });
 
         function buyModule(index) {
             const module = game.modules[index];
             if (game.credits >= module.cost) {
                 game.credits -= module.cost;
                 module.owned++;
-                module.cost = Math.floor(module.cost * 1.15);
+                module.cost = Math.floor(module.cost * 1.12);
                 game.creditsPerSecond += module.cps;
-                game.crewCount += module.crew;
-                game.powerOutput += module.power;
-                sounds.build();
+                sounds.buy();
                 updateDisplay();
-                renderUpgrades();
-                showNotification(`${module.name} Built!`);
             }
         }
 
-        function showNotification(message) {
-            const notif = document.createElement('div');
-            notif.className = 'notification';
-            notif.innerHTML = `<h2>${message}</h2>`;
-            document.body.appendChild(notif);
+        function updateDisplay() {
+            document.getElementById('credits').textContent = formatNumber(game.credits);
+            document.getElementById('perSec').textContent = formatNumber(game.creditsPerSecond);
+            document.getElementById('total').textContent = formatNumber(game.totalEarned);
 
-            setTimeout(() => {
-                notif.classList.add('hide');
-                setTimeout(() => notif.remove(), 300);
-            }, 1500);
+            const container = document.getElementById('upgrades');
+            container.innerHTML = '';
+
+            game.modules.forEach((module, index) => {
+                const canAfford = game.credits >= module.cost;
+                const div = document.createElement('div');
+                div.className = `upgrade ${!canAfford ? 'locked' : ''}`;
+
+                const production = module.owned > 0 ? formatNumber(module.owned * module.cps) + '/s' : '';
+
+                div.innerHTML = `
+                    <div class="upgrade-header">
+                        <div class="upgrade-icon">${module.icon}</div>
+                        <div class="upgrade-info">
+                            <div class="upgrade-name">${module.name}</div>
+                            <div class="upgrade-desc">${module.desc}</div>
+                        </div>
+                    </div>
+                    <div class="upgrade-stats">
+                        Owned: ${module.owned}
+                        ${production ? `<div class="upgrade-production">+${production}</div>` : ''}
+                    </div>
+                    <div class="upgrade-cost">Cost: ${formatNumber(module.cost)} Credits</div>
+                `;
+
+                div.addEventListener('click', () => buyModule(index));
+                container.appendChild(div);
+            });
         }
 
-        // Game loop
-        let lastAmbient = 0;
-        function gameLoop() {
-            const now = Date.now();
-
-            // Passive income
+        // Game loop - 60 FPS
+        setInterval(() => {
             game.credits += game.creditsPerSecond / 60;
             game.totalEarned += game.creditsPerSecond / 60;
-
-            // Ambient sound
-            if (game.creditsPerSecond > 0 && now - lastAmbient > 3000) {
-                sounds.ambient();
-                lastAmbient = now;
-            }
-
             updateDisplay();
-            requestAnimationFrame(gameLoop);
-        }
+        }, 1000 / 60);
 
-        // Auto-save
+        // Auto-save every 10 seconds
         setInterval(() => {
-            localStorage.setItem('spaceStation', JSON.stringify(game));
-        }, 5000);
+            localStorage.setItem('spaceStationSave', JSON.stringify(game));
+        }, 10000);
 
         // Load save
-        const saved = localStorage.getItem('spaceStation');
+        const saved = localStorage.getItem('spaceStationSave');
         if (saved) {
             const data = JSON.parse(saved);
-            game.credits = data.credits || 0;
+            game.credits = data.credits || 10;
             game.totalEarned = data.totalEarned || 0;
+            game.clickPower = data.clickPower || 1;
             game.creditsPerSecond = 0;
-            game.crewCount = 0;
-            game.powerOutput = 0;
+
             if (data.modules) {
-                data.modules.forEach((savedMod, i) => {
+                data.modules.forEach((saved, i) => {
                     if (game.modules[i]) {
-                        game.modules[i].owned = savedMod.owned || 0;
-                        game.modules[i].cost = savedMod.cost || game.modules[i].cost;
+                        game.modules[i].owned = saved.owned || 0;
+                        game.modules[i].cost = saved.cost || game.modules[i].cost;
                         game.creditsPerSecond += game.modules[i].cps * game.modules[i].owned;
-                        game.crewCount += game.modules[i].crew * game.modules[i].owned;
-                        game.powerOutput += game.modules[i].power * game.modules[i].owned;
                     }
                 });
             }
+
+            // Offline earnings (max 4 hours)
+            const lastSave = data.lastSave || Date.now();
+            const offlineTime = Math.min((Date.now() - lastSave) / 1000, 14400);
+            const offlineEarnings = game.creditsPerSecond * offlineTime;
+            if (offlineEarnings > 0) {
+                game.credits += offlineEarnings;
+                game.totalEarned += offlineEarnings;
+                alert(`Welcome back! You earned ${formatNumber(offlineEarnings)} credits while away!`);
+            }
         }
 
-        // Initialize
-        renderUpgrades();
+        game.lastSave = Date.now();
         updateDisplay();
-        gameLoop();
     </script>
 </body>
 </html>

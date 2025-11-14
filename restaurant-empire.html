@@ -3,339 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restaurant Empire - Tycoon Game</title>
+    <title>Restaurant Empire</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: Arial, sans-serif;
             background: linear-gradient(135deg, #ff6b6b 0%, #feca57 50%, #ee5a6f 100%);
+            color: white;
             min-height: 100vh;
-            overflow-x: hidden;
             padding: 20px;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
-        .header {
+        h1 {
             text-align: center;
-            color: white;
+            font-size: 48px;
             margin-bottom: 30px;
+            text-shadow: 0 0 20px rgba(0,0,0,0.3);
         }
 
-        .header h1 {
-            font-size: 56px;
-            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            font-size: 18px;
-            opacity: 0.9;
-        }
-
-        .stats-bar {
+        .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
             margin-bottom: 30px;
         }
 
         .stat {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
             text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            transition: transform 0.3s;
-        }
-
-        .stat:hover {
-            transform: translateY(-5px);
+            border: 2px solid rgba(255,255,255,0.3);
         }
 
         .stat-label {
-            font-size: 14px;
-            color: #666;
+            font-size: 12px;
+            color: rgba(255,255,255,0.8);
             margin-bottom: 5px;
-            text-transform: uppercase;
         }
 
         .stat-value {
-            font-size: 32px;
+            font-size: 24px;
             font-weight: bold;
-            color: #ff6b6b;
+            color: white;
         }
 
-        .restaurant-view {
-            background: white;
+        .click-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .restaurant-btn {
+            width: 250px;
+            height: 250px;
             border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            perspective: 1000px;
-        }
-
-        .tables-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .table {
-            aspect-ratio: 1;
-            background: linear-gradient(145deg, #f0f0f0, #ffffff);
-            border: 3px solid #ddd;
-            border-radius: 15px;
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            border: 5px solid #ff6b6b;
+            font-size: 100px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            margin: 20px auto;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
-            transform-style: preserve-3d;
-            font-size: 32px;
         }
 
-        .table:hover {
-            transform: rotateX(10deg) rotateY(10deg) scale(1.05);
-            border-color: #ff6b6b;
-            box-shadow: 0 10px 25px rgba(255,107,107,0.3);
+        .restaurant-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 60px rgba(0,0,0,0.4);
         }
 
-        .table.occupied {
-            background: linear-gradient(145deg, #ffe5e5, #fff0f0);
-            border-color: #ff6b6b;
-            animation: serve 2s infinite;
+        .restaurant-btn:active {
+            transform: scale(0.95);
         }
 
-        @keyframes serve {
-            0%, 100% {
-                box-shadow: 0 0 10px rgba(255,107,107,0.3);
-            }
-            50% {
-                box-shadow: 0 0 25px rgba(255,107,107,0.6);
-            }
+        .click-hint {
+            font-size: 18px;
+            color: rgba(255,255,255,0.9);
+            margin-top: 15px;
         }
 
-        .table-status {
-            font-size: 12px;
-            margin-top: 5px;
-            color: #666;
-        }
-
-        .upgrades-section {
-            margin-bottom: 30px;
-        }
-
-        .section-title {
-            color: white;
-            font-size: 32px;
-            margin-bottom: 20px;
-            text-align: center;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .upgrades-grid {
+        .upgrades {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
         }
 
-        .upgrade-card {
-            background: white;
+        .upgrade {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
             border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            transition: all 0.3s;
+            border: 2px solid rgba(255,255,255,0.3);
             cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            transform-style: preserve-3d;
+            transition: all 0.3s;
         }
 
-        .upgrade-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,107,107,0.2), transparent);
-            transition: left 0.5s;
+        .upgrade:hover {
+            border-color: white;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
-        .upgrade-card:hover::before {
-            left: 100%;
-        }
-
-        .upgrade-card:hover {
-            transform: translateY(-10px) rotateX(5deg);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
-        }
-
-        .upgrade-card.active {
-            border: 3px solid #ff6b6b;
-            background: linear-gradient(145deg, #fff5f5, #ffffff);
-        }
-
-        .upgrade-icon {
-            font-size: 56px;
-            margin-bottom: 15px;
-            display: inline-block;
-            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.2));
-        }
-
-        .upgrade-card.active .upgrade-icon {
-            animation: bounce 1s infinite;
-        }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .upgrade-name {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .upgrade-desc {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 15px;
-            line-height: 1.4;
-        }
-
-        .upgrade-stats {
-            margin: 15px 0;
-        }
-
-        .upgrade-owned {
-            font-size: 16px;
-            color: #ff6b6b;
-            font-weight: bold;
-            margin: 5px 0;
-        }
-
-        .upgrade-production {
-            font-size: 14px;
-            color: #27ae60;
-            margin: 5px 0;
-        }
-
-        .upgrade-cost {
-            font-size: 20px;
-            font-weight: bold;
-            color: #ff6b6b;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 2px solid #f0f0f0;
-        }
-
-        .upgrade-card.cannot-afford {
+        .upgrade.locked {
             opacity: 0.5;
             cursor: not-allowed;
         }
 
-        .customer {
-            position: fixed;
-            font-size: 32px;
-            pointer-events: none;
-            animation: walkIn 3s linear forwards;
-            z-index: 1000;
+        .upgrade-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
         }
 
-        @keyframes walkIn {
-            0% {
-                left: -50px;
-                bottom: 20%;
-            }
-            100% {
-                left: 50%;
-                bottom: 20%;
-                opacity: 0;
-            }
+        .upgrade-icon {
+            font-size: 48px;
         }
 
-        .money-popup {
-            position: fixed;
-            font-size: 24px;
+        .upgrade-info {
+            flex: 1;
+        }
+
+        .upgrade-name {
+            font-size: 20px;
             font-weight: bold;
-            color: #27ae60;
-            pointer-events: none;
-            animation: floatUp 2s ease-out forwards;
-            z-index: 1000;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 5px;
         }
 
-        @keyframes floatUp {
-            0% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-            100% {
-                opacity: 0;
-                transform: translateY(-100px) scale(1.5);
-            }
+        .upgrade-desc {
+            font-size: 13px;
+            color: rgba(255,255,255,0.8);
         }
 
-        .click-hint {
+        .upgrade-stats {
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .upgrade-production {
+            color: #4caf50;
+            margin: 5px 0;
+        }
+
+        .upgrade-cost {
+            background: white;
+            color: #ff6b6b;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
             text-align: center;
-            color: white;
-            font-size: 18px;
-            margin: 20px 0;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-top: 10px;
+        }
+
+        .section-title {
+            font-size: 28px;
+            margin: 30px 0 20px 0;
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🍽️ RESTAURANT EMPIRE</h1>
-            <p>Build the world's most successful restaurant!</p>
-        </div>
+        <h1>🍽️ Restaurant Empire</h1>
 
-        <div class="stats-bar">
+        <div class="stats">
             <div class="stat">
                 <div class="stat-label">Money</div>
                 <div class="stat-value" id="money">$0</div>
             </div>
             <div class="stat">
-                <div class="stat-label">Income/sec</div>
-                <div class="stat-value" id="income">$0</div>
+                <div class="stat-label">Per Second</div>
+                <div class="stat-value" id="perSec">$0</div>
             </div>
             <div class="stat">
                 <div class="stat-label">Total Earned</div>
-                <div class="stat-value" id="totalEarned">$0</div>
-            </div>
-            <div class="stat">
-                <div class="stat-label">Customers Served</div>
-                <div class="stat-value" id="customersServed">0</div>
+                <div class="stat-value" id="total">$0</div>
             </div>
         </div>
 
-        <div class="restaurant-view">
-            <h2 style="text-align: center; color: #ff6b6b; margin-bottom: 20px;">Your Restaurant Floor</h2>
-            <div class="click-hint">Click tables to serve customers!</div>
-            <div class="tables-grid" id="tablesGrid"></div>
+        <div class="click-section">
+            <button class="restaurant-btn" id="clickBtn">🍔</button>
+            <div class="click-hint">Click to serve customers!</div>
         </div>
 
-        <div class="upgrades-section">
-            <h2 class="section-title">🎯 Staff & Upgrades</h2>
-            <div class="upgrades-grid" id="upgradesGrid"></div>
-        </div>
+        <h2 class="section-title">👨‍🍳 Staff & Upgrades</h2>
+        <div class="upgrades" id="upgrades"></div>
     </div>
 
     <script>
@@ -349,7 +207,7 @@
                 gain.connect(audioCtx.destination);
                 osc.frequency.value = 600;
                 osc.type = 'sine';
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.1);
@@ -360,46 +218,32 @@
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(700, audioCtx.currentTime + 0.2);
+                osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.2);
                 osc.type = 'square';
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.2);
-            },
-            cash: () => {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.15);
-                osc.type = 'triangle';
-                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.15);
             }
         };
 
         const game = {
-            money: 50,
+            money: 10,
             totalEarned: 0,
             moneyPerSecond: 0,
-            customersServed: 0,
-            tableCount: 6,
-            clickValue: 5,
+            clickValue: 1,
             upgrades: [
-                { name: 'Waiter', icon: '🧑‍🍳', cost: 50, owned: 0, mps: 1, desc: 'Serves customers automatically' },
-                { name: 'Chef', icon: '👨‍🍳', cost: 250, owned: 0, mps: 5, desc: 'Cooks delicious meals faster' },
-                { name: 'Sous Chef', icon: '👩‍🍳', cost: 1000, owned: 0, mps: 20, desc: 'Expert kitchen assistant' },
-                { name: 'Bartender', icon: '🍹', cost: 5000, owned: 0, mps: 100, desc: 'Mixes profitable drinks' },
-                { name: 'Sommelier', icon: '🍷', cost: 25000, owned: 0, mps: 500, desc: 'Wine expert brings in VIPs' },
-                { name: 'Restaurant Chain', icon: '🏢', cost: 100000, owned: 0, mps: 2000, desc: 'Multiple locations' },
-                { name: 'Celebrity Chef', icon: '⭐', cost: 500000, owned: 0, mps: 10000, desc: 'Famous chef attracts crowds' },
-                { name: 'Food Empire', icon: '🌍', cost: 2000000, owned: 0, mps: 50000, desc: 'Global restaurant empire' }
-            ],
-            tables: []
+                { name: 'Waiter', icon: '🧑‍🍳', cost: 10, owned: 0, mps: 0.5, desc: 'Serves customers' },
+                { name: 'Chef', icon: '👨‍🍳', cost: 50, owned: 0, mps: 2, desc: 'Cooks meals' },
+                { name: 'Sous Chef', icon: '👩‍🍳', cost: 200, owned: 0, mps: 8, desc: 'Expert kitchen help' },
+                { name: 'Bartender', icon: '🍹', cost: 800, owned: 0, mps: 32, desc: 'Serves drinks' },
+                { name: 'Manager', icon: '💼', cost: 3000, owned: 0, mps: 120, desc: 'Runs operations' },
+                { name: 'Sommelier', icon: '🍷', cost: 12000, owned: 0, mps: 480, desc: 'Wine expert' },
+                { name: 'Celebrity Chef', icon: '⭐', cost: 50000, owned: 0, mps: 2000, desc: 'Famous chef' },
+                { name: 'Restaurant Chain', icon: '🏢', cost: 200000, owned: 0, mps: 8000, desc: 'Multiple locations' },
+                { name: 'Food Franchise', icon: '🌍', cost: 800000, owned: 0, mps: 32000, desc: 'Global empire' },
+                { name: 'Food Network', icon: '📺', cost: 3200000, owned: 0, mps: 128000, desc: 'Media empire' }
+            ]
         };
 
         function formatMoney(num) {
@@ -409,179 +253,103 @@
             return '$' + Math.floor(num);
         }
 
-        function initTables() {
-            game.tables = [];
-            for (let i = 0; i < game.tableCount; i++) {
-                game.tables.push({
-                    occupied: false,
-                    timer: 0
-                });
-            }
-            renderTables();
-        }
-
-        function renderTables() {
-            const grid = document.getElementById('tablesGrid');
-            grid.innerHTML = '';
-
-            game.tables.forEach((table, index) => {
-                const tableDiv = document.createElement('div');
-                tableDiv.className = 'table';
-                if (table.occupied) tableDiv.classList.add('occupied');
-
-                tableDiv.innerHTML = `
-                    🪑
-                    <div class="table-status">${table.occupied ? '👥' : 'Empty'}</div>
-                `;
-
-                tableDiv.addEventListener('click', () => clickTable(index));
-                grid.appendChild(tableDiv);
-            });
-        }
-
-        function clickTable(index) {
-            const table = game.tables[index];
-            if (table.occupied) {
-                // Serve the customer
-                game.money += game.clickValue;
-                game.totalEarned += game.clickValue;
-                game.customersServed++;
-                table.occupied = false;
-
-                sounds.serve();
-                sounds.cash();
-
-                // Money popup
-                const popup = document.createElement('div');
-                popup.className = 'money-popup';
-                popup.textContent = '+' + formatMoney(game.clickValue);
-                popup.style.left = Math.random() * 80 + 10 + '%';
-                popup.style.top = Math.random() * 50 + 25 + '%';
-                document.body.appendChild(popup);
-                setTimeout(() => popup.remove(), 2000);
-
-                // Customer walks out
-                const customer = document.createElement('div');
-                customer.className = 'customer';
-                customer.textContent = ['🧑', '👨', '👩', '🧓', '👴', '👵'][Math.floor(Math.random() * 6)];
-                customer.style.left = '50%';
-                customer.style.bottom = '20%';
-                document.body.appendChild(customer);
-                setTimeout(() => customer.remove(), 3000);
-
-                renderTables();
-                updateDisplay();
-            }
-        }
+        document.getElementById('clickBtn').addEventListener('click', () => {
+            game.money += game.clickValue;
+            game.totalEarned += game.clickValue;
+            sounds.serve();
+            updateDisplay();
+        });
 
         function buyUpgrade(index) {
             const upgrade = game.upgrades[index];
             if (game.money >= upgrade.cost) {
                 game.money -= upgrade.cost;
                 upgrade.owned++;
-                upgrade.cost = Math.floor(upgrade.cost * 1.15);
-
+                upgrade.cost = Math.floor(upgrade.cost * 1.12);
+                game.moneyPerSecond += upgrade.mps;
                 sounds.buy();
                 updateDisplay();
             }
         }
 
         function updateDisplay() {
-            game.moneyPerSecond = 0;
-            game.upgrades.forEach(u => {
-                game.moneyPerSecond += u.owned * u.mps;
-            });
-
             document.getElementById('money').textContent = formatMoney(game.money);
-            document.getElementById('income').textContent = formatMoney(game.moneyPerSecond);
-            document.getElementById('totalEarned').textContent = formatMoney(game.totalEarned);
-            document.getElementById('customersServed').textContent = game.customersServed;
+            document.getElementById('perSec').textContent = formatMoney(game.moneyPerSecond);
+            document.getElementById('total').textContent = formatMoney(game.totalEarned);
 
-            const grid = document.getElementById('upgradesGrid');
-            grid.innerHTML = '';
+            const container = document.getElementById('upgrades');
+            container.innerHTML = '';
 
             game.upgrades.forEach((upgrade, index) => {
-                const card = document.createElement('div');
-                card.className = 'upgrade-card';
-                if (upgrade.owned > 0) card.classList.add('active');
-                if (game.money < upgrade.cost) card.classList.add('cannot-afford');
+                const canAfford = game.money >= upgrade.cost;
+                const div = document.createElement('div');
+                div.className = `upgrade ${!canAfford ? 'locked' : ''}`;
 
-                const production = upgrade.owned * upgrade.mps;
+                const production = upgrade.owned > 0 ? formatMoney(upgrade.owned * upgrade.mps) + '/s' : '';
 
-                card.innerHTML = `
-                    <div class="upgrade-icon">${upgrade.icon}</div>
-                    <div class="upgrade-name">${upgrade.name}</div>
-                    <div class="upgrade-desc">${upgrade.desc}</div>
+                div.innerHTML = `
+                    <div class="upgrade-header">
+                        <div class="upgrade-icon">${upgrade.icon}</div>
+                        <div class="upgrade-info">
+                            <div class="upgrade-name">${upgrade.name}</div>
+                            <div class="upgrade-desc">${upgrade.desc}</div>
+                        </div>
+                    </div>
                     <div class="upgrade-stats">
-                        <div class="upgrade-owned">Hired: ${upgrade.owned}</div>
-                        ${upgrade.owned > 0 ? `<div class="upgrade-production">+${formatMoney(production)}/sec</div>` : ''}
+                        Hired: ${upgrade.owned}
+                        ${production ? `<div class="upgrade-production">+${production}</div>` : ''}
                     </div>
                     <div class="upgrade-cost">Cost: ${formatMoney(upgrade.cost)}</div>
                 `;
 
-                card.addEventListener('click', () => buyUpgrade(index));
-                grid.appendChild(card);
+                div.addEventListener('click', () => buyUpgrade(index));
+                container.appendChild(div);
             });
         }
 
-        // Game loop
+        // Game loop - 60 FPS
         setInterval(() => {
             game.money += game.moneyPerSecond / 60;
             game.totalEarned += game.moneyPerSecond / 60;
             updateDisplay();
         }, 1000 / 60);
 
-        // Customer spawning
+        // Auto-save every 10 seconds
         setInterval(() => {
-            // Find empty tables
-            const emptyTables = game.tables
-                .map((t, i) => ({ table: t, index: i }))
-                .filter(({ table }) => !table.occupied);
-
-            if (emptyTables.length > 0) {
-                const random = emptyTables[Math.floor(Math.random() * emptyTables.length)];
-                random.table.occupied = true;
-                random.table.timer = 0;
-
-                // Customer walks in
-                const customer = document.createElement('div');
-                customer.className = 'customer';
-                customer.textContent = ['🧑', '👨', '👩', '🧓', '👴', '👵'][Math.floor(Math.random() * 6)];
-                document.body.appendChild(customer);
-                setTimeout(() => customer.remove(), 3000);
-
-                renderTables();
-            }
-        }, 3000);
-
-        // Auto-save
-        setInterval(() => {
-            localStorage.setItem('restaurantEmpireSave', JSON.stringify({
-                money: game.money,
-                totalEarned: game.totalEarned,
-                customersServed: game.customersServed,
-                upgrades: game.upgrades
-            }));
-        }, 5000);
+            localStorage.setItem('restaurantEmpireSave', JSON.stringify(game));
+        }, 10000);
 
         // Load save
-        const save = localStorage.getItem('restaurantEmpireSave');
-        if (save) {
-            const loaded = JSON.parse(save);
-            game.money = loaded.money || 50;
-            game.totalEarned = loaded.totalEarned || 0;
-            game.customersServed = loaded.customersServed || 0;
-            if (loaded.upgrades) {
-                loaded.upgrades.forEach((u, i) => {
+        const saved = localStorage.getItem('restaurantEmpireSave');
+        if (saved) {
+            const data = JSON.parse(saved);
+            game.money = data.money || 10;
+            game.totalEarned = data.totalEarned || 0;
+            game.clickValue = data.clickValue || 1;
+            game.moneyPerSecond = 0;
+
+            if (data.upgrades) {
+                data.upgrades.forEach((saved, i) => {
                     if (game.upgrades[i]) {
-                        game.upgrades[i].owned = u.owned;
-                        game.upgrades[i].cost = u.cost;
+                        game.upgrades[i].owned = saved.owned || 0;
+                        game.upgrades[i].cost = saved.cost || game.upgrades[i].cost;
+                        game.moneyPerSecond += game.upgrades[i].mps * game.upgrades[i].owned;
                     }
                 });
             }
+
+            // Offline earnings (max 4 hours)
+            const lastSave = data.lastSave || Date.now();
+            const offlineTime = Math.min((Date.now() - lastSave) / 1000, 14400);
+            const offlineEarnings = game.moneyPerSecond * offlineTime;
+            if (offlineEarnings > 0) {
+                game.money += offlineEarnings;
+                game.totalEarned += offlineEarnings;
+                alert(`Welcome back! Your restaurant earned ${formatMoney(offlineEarnings)} while you were away!`);
+            }
         }
 
-        initTables();
+        game.lastSave = Date.now();
         updateDisplay();
     </script>
 </body>
