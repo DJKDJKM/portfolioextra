@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Train Tycoon Empire</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 48px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(255,215,0,0.5);
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stats-panel {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid rgba(255,215,0,0.3);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .train-track {
+            background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.4));
+            border-radius: 15px;
+            padding: 30px;
+            position: relative;
+            min-height: 200px;
+            overflow: hidden;
+            border: 2px solid rgba(255,215,0,0.2);
+        }
+
+        .track-line {
+            position: absolute;
+            bottom: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: repeating-linear-gradient(
+                90deg,
+                #8b4513 0px,
+                #8b4513 10px,
+                transparent 10px,
+                transparent 20px
+            );
+        }
+
+        .track-line::before {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #666;
+        }
+
+        .track-line::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #666;
+        }
+
+        .train {
+            position: absolute;
+            bottom: calc(50% - 25px);
+            font-size: 40px;
+            animation: moveTrain 10s linear infinite;
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));
+        }
+
+        @keyframes moveTrain {
+            from { left: -50px; }
+            to { left: 100%; }
+        }
+
+        .click-area {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .train-btn {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #ffd700, #ff8c00);
+            border: 5px solid #ffed4e;
+            font-size: 80px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 10px 40px rgba(255,215,0,0.5);
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .train-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 60px rgba(255,215,0,0.8);
+        }
+
+        .train-btn:active {
+            transform: scale(0.95);
+        }
+
+        .click-hint {
+            margin-top: 15px;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .routes-panel {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid rgba(255,215,0,0.3);
+        }
+
+        .panel-title {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #ffd700;
+            text-align: center;
+            border-bottom: 2px solid rgba(255,215,0,0.3);
+            padding-bottom: 10px;
+        }
+
+        .section {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 2px solid rgba(255,215,0,0.3);
+        }
+
+        .upgrades-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .upgrade-card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,215,0,0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upgrade-card:hover {
+            border-color: #ffd700;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255,215,0,0.4);
+        }
+
+        .upgrade-card.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .upgrade-card.active {
+            border-color: #00ff00;
+            background: rgba(0,255,0,0.1);
+        }
+
+        .upgrade-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .upgrade-icon {
+            font-size: 36px;
+        }
+
+        .upgrade-info {
+            flex: 1;
+        }
+
+        .upgrade-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .upgrade-desc {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .upgrade-stats {
+            margin: 10px 0;
+            font-size: 13px;
+        }
+
+        .upgrade-level {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .upgrade-production {
+            color: #4caf50;
+            margin-top: 5px;
+        }
+
+        .upgrade-cost {
+            background: #ffd700;
+            color: #000;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .route-item {
+            background: rgba(255,255,255,0.1);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 2px solid rgba(255,215,0,0.2);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .route-item:hover {
+            border-color: #ffd700;
+            background: rgba(255,255,255,0.15);
+        }
+
+        .route-item.active {
+            border-color: #00ff00;
+            background: rgba(0,255,0,0.1);
+        }
+
+        .route-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .route-name {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .route-level {
+            font-size: 14px;
+            color: #ffd700;
+        }
+
+        .route-income {
+            font-size: 13px;
+            color: #4caf50;
+        }
+
+        .route-cost {
+            background: #ffd700;
+            color: #000;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 5px;
+            display: inline-block;
+        }
+
+        .multiplier-badge {
+            background: #ff6b6b;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid rgba(255,215,0,0.3);
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .tab.active {
+            background: rgba(255,215,0,0.2);
+            border-color: #ffd700;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚂 TRAIN TYCOON EMPIRE</h1>
+        <p class="subtitle">Build your railway network and dominate the transportation industry!</p>
+
+        <div class="stats-grid">
+            <div class="stat">
+                <div class="stat-label">Money</div>
+                <div class="stat-value" id="money">$0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Income/Second</div>
+                <div class="stat-value" id="income">$0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Total Earned</div>
+                <div class="stat-value" id="totalEarned">$0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Active Routes</div>
+                <div class="stat-value" id="activeRoutes">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Passengers</div>
+                <div class="stat-value" id="passengers">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Cargo Tons</div>
+                <div class="stat-value" id="cargo">0</div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div class="stats-panel">
+                <div class="train-track">
+                    <div class="track-line"></div>
+                    <div class="train">🚂</div>
+                    <div class="click-area">
+                        <button class="train-btn" id="clickBtn">🚂</button>
+                        <div class="click-hint">Click to transport passengers!</div>
+                    </div>
+                </div>
+
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('trains')">🚂 Trains</div>
+                    <div class="tab" onclick="switchTab('stations')">🏢 Stations</div>
+                    <div class="tab" onclick="switchTab('research')">🔬 Research</div>
+                </div>
+
+                <div id="trains-content" class="tab-content active">
+                    <div class="panel-title">Train Fleet</div>
+                    <div class="upgrades-grid" id="trainsGrid"></div>
+                </div>
+
+                <div id="stations-content" class="tab-content">
+                    <div class="panel-title">Station Upgrades</div>
+                    <div class="upgrades-grid" id="stationsGrid"></div>
+                </div>
+
+                <div id="research-content" class="tab-content">
+                    <div class="panel-title">Technology Research</div>
+                    <div class="upgrades-grid" id="researchGrid"></div>
+                </div>
+            </div>
+
+            <div class="routes-panel">
+                <div class="panel-title">🗺️ Routes</div>
+                <div id="routesContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        const sounds = {
+            click: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 800;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            },
+            buy: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.2);
+                osc.type = 'square';
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            }
+        };
+
+        const game = {
+            money: 50,
+            totalEarned: 0,
+            moneyPerSecond: 0,
+            clickPower: 1,
+            activeRoutes: 0,
+            totalPassengers: 0,
+            totalCargo: 0,
+            trains: [
+                { name: 'Steam Engine', icon: '🚂', cost: 50, level: 0, baseMps: 1, desc: 'Classic steam locomotive' },
+                { name: 'Diesel Train', icon: '🚃', cost: 250, level: 0, baseMps: 5, desc: 'Modern diesel power' },
+                { name: 'Electric Train', icon: '🚄', cost: 1000, level: 0, baseMps: 20, desc: 'High-speed electric' },
+                { name: 'Bullet Train', icon: '🚅', cost: 5000, level: 0, baseMps: 100, desc: 'Ultra-fast bullet train' },
+                { name: 'Maglev', icon: '🚝', cost: 25000, level: 0, baseMps: 500, desc: 'Magnetic levitation' },
+                { name: 'Hyperloop', icon: '🚇', cost: 125000, level: 0, baseMps: 2500, desc: 'Future of transport' }
+            ],
+            stations: [
+                { name: 'Platform Upgrade', icon: '🏢', cost: 200, level: 0, multiplier: 0.1, desc: 'More platforms = more trains' },
+                { name: 'Station Expansion', icon: '🏗️', cost: 1000, level: 0, multiplier: 0.15, desc: 'Bigger stations' },
+                { name: 'Automated Gates', icon: '🚪', cost: 5000, level: 0, multiplier: 0.2, desc: 'Faster boarding' },
+                { name: 'Modern Terminal', icon: '🏛️', cost: 25000, level: 0, multiplier: 0.25, desc: 'Premium facilities' }
+            ],
+            research: [
+                { name: 'Efficiency Study', icon: '📊', cost: 500, level: 0, multiplier: 0.15, desc: 'Optimize operations' },
+                { name: 'Safety Systems', icon: '🛡️', cost: 2500, level: 0, multiplier: 0.2, desc: 'Reduce delays' },
+                { name: 'AI Routing', icon: '🤖', cost: 12500, level: 0, multiplier: 0.25, desc: 'Smart path finding' },
+                { name: 'Quantum Computing', icon: '⚛️', cost: 62500, level: 0, multiplier: 0.3, desc: 'Ultimate efficiency' }
+            ],
+            routes: [
+                { name: 'Local Line', icon: '🏘️', cost: 100, level: 0, baseMps: 2, desc: 'City local service' },
+                { name: 'Express Route', icon: '⚡', cost: 500, level: 0, baseMps: 10, desc: 'Skip-stop service' },
+                { name: 'Interstate Line', icon: '🌆', cost: 2500, level: 0, baseMps: 50, desc: 'Cross-state travel' },
+                { name: 'Transcontinental', icon: '🌍', cost: 12500, level: 0, baseMps: 250, desc: 'Coast to coast' },
+                { name: 'International', icon: '✈️', cost: 62500, level: 0, baseMps: 1250, desc: 'Global network' }
+            ]
+        };
+
+        function formatMoney(num) {
+            if (num >= 1e12) return '$' + (num / 1e12).toFixed(2) + 'T';
+            if (num >= 1e9) return '$' + (num / 1e9).toFixed(2) + 'B';
+            if (num >= 1e6) return '$' + (num / 1e6).toFixed(2) + 'M';
+            if (num >= 1e3) return '$' + (num / 1e3).toFixed(2) + 'K';
+            return '$' + Math.floor(num);
+        }
+
+        function formatNumber(num) {
+            if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+            if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+            return Math.floor(num).toString();
+        }
+
+        function calculateMultiplier() {
+            let mult = 1;
+            game.stations.forEach(s => mult += s.level * s.multiplier);
+            game.research.forEach(r => mult += r.level * r.multiplier);
+            return mult;
+        }
+
+        function calculateIncome() {
+            let income = 0;
+            const mult = calculateMultiplier();
+
+            game.trains.forEach(t => {
+                income += t.level * t.baseMps * mult;
+            });
+
+            game.routes.forEach(r => {
+                income += r.level * r.baseMps * mult;
+            });
+
+            return income;
+        }
+
+        document.getElementById('clickBtn').addEventListener('click', () => {
+            game.money += game.clickPower;
+            game.totalEarned += game.clickPower;
+            game.totalPassengers += 1;
+            sounds.click();
+            updateDisplay();
+        });
+
+        function buyTrain(index) {
+            const train = game.trains[index];
+            if (game.money >= train.cost) {
+                game.money -= train.cost;
+                train.level++;
+                train.cost = Math.floor(train.cost * 1.15);
+                sounds.buy();
+                updateDisplay();
+            }
+        }
+
+        function buyStation(index) {
+            const station = game.stations[index];
+            if (game.money >= station.cost) {
+                game.money -= station.cost;
+                station.level++;
+                station.cost = Math.floor(station.cost * 1.2);
+                sounds.buy();
+                updateDisplay();
+            }
+        }
+
+        function buyResearch(index) {
+            const research = game.research[index];
+            if (game.money >= research.cost) {
+                game.money -= research.cost;
+                research.level++;
+                research.cost = Math.floor(research.cost * 1.25);
+                sounds.buy();
+                updateDisplay();
+            }
+        }
+
+        function buyRoute(index) {
+            const route = game.routes[index];
+            if (game.money >= route.cost) {
+                game.money -= route.cost;
+                route.level++;
+                route.cost = Math.floor(route.cost * 1.15);
+                if (route.level === 1) game.activeRoutes++;
+                sounds.buy();
+                updateDisplay();
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tab + '-content').classList.add('active');
+        }
+
+        function updateDisplay() {
+            game.moneyPerSecond = calculateIncome();
+            const mult = calculateMultiplier();
+
+            document.getElementById('money').textContent = formatMoney(game.money);
+            document.getElementById('income').textContent = formatMoney(game.moneyPerSecond);
+            document.getElementById('totalEarned').textContent = formatMoney(game.totalEarned);
+            document.getElementById('activeRoutes').textContent = game.activeRoutes;
+            document.getElementById('passengers').textContent = formatNumber(game.totalPassengers);
+            document.getElementById('cargo').textContent = formatNumber(game.totalCargo);
+
+            // Trains
+            const trainsGrid = document.getElementById('trainsGrid');
+            trainsGrid.innerHTML = '';
+            game.trains.forEach((train, i) => {
+                const canAfford = game.money >= train.cost;
+                const production = train.level > 0 ? formatMoney(train.level * train.baseMps * mult) + '/s' : '';
+
+                const card = document.createElement('div');
+                card.className = `upgrade-card ${!canAfford ? 'locked' : ''} ${train.level > 0 ? 'active' : ''}`;
+                card.innerHTML = `
+                    <div class="upgrade-header">
+                        <div class="upgrade-icon">${train.icon}</div>
+                        <div class="upgrade-info">
+                            <div class="upgrade-name">${train.name}</div>
+                            <div class="upgrade-desc">${train.desc}</div>
+                        </div>
+                    </div>
+                    <div class="upgrade-stats">
+                        <div class="upgrade-level">Level: ${train.level}</div>
+                        ${production ? `<div class="upgrade-production">Income: ${production}</div>` : ''}
+                    </div>
+                    <div class="upgrade-cost">Cost: ${formatMoney(train.cost)}</div>
+                `;
+                card.addEventListener('click', () => buyTrain(i));
+                trainsGrid.appendChild(card);
+            });
+
+            // Stations
+            const stationsGrid = document.getElementById('stationsGrid');
+            stationsGrid.innerHTML = '';
+            game.stations.forEach((station, i) => {
+                const canAfford = game.money >= station.cost;
+
+                const card = document.createElement('div');
+                card.className = `upgrade-card ${!canAfford ? 'locked' : ''} ${station.level > 0 ? 'active' : ''}`;
+                card.innerHTML = `
+                    <div class="upgrade-header">
+                        <div class="upgrade-icon">${station.icon}</div>
+                        <div class="upgrade-info">
+                            <div class="upgrade-name">${station.name}</div>
+                            <div class="upgrade-desc">${station.desc}</div>
+                        </div>
+                    </div>
+                    <div class="upgrade-stats">
+                        <div class="upgrade-level">Level: ${station.level}</div>
+                        <div class="upgrade-production">+${(station.multiplier * 100).toFixed(0)}% per level</div>
+                    </div>
+                    <div class="upgrade-cost">Cost: ${formatMoney(station.cost)}</div>
+                `;
+                card.addEventListener('click', () => buyStation(i));
+                stationsGrid.appendChild(card);
+            });
+
+            // Research
+            const researchGrid = document.getElementById('researchGrid');
+            researchGrid.innerHTML = '';
+            game.research.forEach((research, i) => {
+                const canAfford = game.money >= research.cost;
+
+                const card = document.createElement('div');
+                card.className = `upgrade-card ${!canAfford ? 'locked' : ''} ${research.level > 0 ? 'active' : ''}`;
+                card.innerHTML = `
+                    <div class="upgrade-header">
+                        <div class="upgrade-icon">${research.icon}</div>
+                        <div class="upgrade-info">
+                            <div class="upgrade-name">${research.name}</div>
+                            <div class="upgrade-desc">${research.desc}</div>
+                        </div>
+                    </div>
+                    <div class="upgrade-stats">
+                        <div class="upgrade-level">Level: ${research.level}</div>
+                        <div class="upgrade-production">+${(research.multiplier * 100).toFixed(0)}% per level</div>
+                    </div>
+                    <div class="upgrade-cost">Cost: ${formatMoney(research.cost)}</div>
+                `;
+                card.addEventListener('click', () => buyResearch(i));
+                researchGrid.appendChild(card);
+            });
+
+            // Routes
+            const routesContainer = document.getElementById('routesContainer');
+            routesContainer.innerHTML = '';
+            game.routes.forEach((route, i) => {
+                const canAfford = game.money >= route.cost;
+                const production = route.level > 0 ? formatMoney(route.level * route.baseMps * mult) + '/s' : '';
+
+                const div = document.createElement('div');
+                div.className = `route-item ${route.level > 0 ? 'active' : ''}`;
+                div.innerHTML = `
+                    <div class="route-header">
+                        <div>
+                            <span class="route-name">${route.icon} ${route.name}</span>
+                            ${mult > 1 ? `<span class="multiplier-badge">x${mult.toFixed(2)}</span>` : ''}
+                        </div>
+                        <span class="route-level">Lvl ${route.level}</span>
+                    </div>
+                    <div class="upgrade-desc">${route.desc}</div>
+                    ${production ? `<div class="route-income">${production}</div>` : ''}
+                    <div class="route-cost" style="${!canAfford ? 'opacity: 0.5;' : ''}">
+                        ${canAfford ? 'Buy' : 'Need'}: ${formatMoney(route.cost)}
+                    </div>
+                `;
+                div.addEventListener('click', () => buyRoute(i));
+                routesContainer.appendChild(div);
+            });
+        }
+
+        // Game loop
+        setInterval(() => {
+            game.money += game.moneyPerSecond / 60;
+            game.totalEarned += game.moneyPerSecond / 60;
+            game.totalCargo += game.moneyPerSecond / 120;
+            updateDisplay();
+        }, 1000 / 60);
+
+        // Auto-save
+        setInterval(() => {
+            game.lastSave = Date.now();
+            localStorage.setItem('trainTycoonSave', JSON.stringify(game));
+        }, 10000);
+
+        // Load save
+        const saved = localStorage.getItem('trainTycoonSave');
+        if (saved) {
+            const data = JSON.parse(saved);
+            game.money = data.money || 50;
+            game.totalEarned = data.totalEarned || 0;
+            game.clickPower = data.clickPower || 1;
+            game.activeRoutes = data.activeRoutes || 0;
+            game.totalPassengers = data.totalPassengers || 0;
+            game.totalCargo = data.totalCargo || 0;
+
+            if (data.trains) data.trains.forEach((t, i) => { game.trains[i].level = t.level || 0; game.trains[i].cost = t.cost || game.trains[i].cost; });
+            if (data.stations) data.stations.forEach((s, i) => { game.stations[i].level = s.level || 0; game.stations[i].cost = s.cost || game.stations[i].cost; });
+            if (data.research) data.research.forEach((r, i) => { game.research[i].level = r.level || 0; game.research[i].cost = r.cost || game.research[i].cost; });
+            if (data.routes) data.routes.forEach((r, i) => { game.routes[i].level = r.level || 0; game.routes[i].cost = r.cost || game.routes[i].cost; });
+
+            // Offline earnings
+            const lastSave = data.lastSave || Date.now();
+            const offlineTime = Math.min((Date.now() - lastSave) / 1000, 14400);
+            const offlineEarnings = calculateIncome() * offlineTime;
+            if (offlineEarnings > 0) {
+                game.money += offlineEarnings;
+                game.totalEarned += offlineEarnings;
+                alert(`Welcome back! Your trains earned ${formatMoney(offlineEarnings)} while you were away!`);
+            }
+        }
+
+        game.lastSave = Date.now();
+        updateDisplay();
+    </script>
+</body>
+</html>
