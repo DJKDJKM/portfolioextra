@@ -276,21 +276,13 @@
             }
         }
 
-        function updateDisplay() {
-            document.getElementById('credits').textContent = formatNumber(game.credits);
-            document.getElementById('perSec').textContent = formatNumber(game.creditsPerSecond);
-            document.getElementById('total').textContent = formatNumber(game.totalEarned);
-
+        function createCards() {
             const container = document.getElementById('upgrades');
             container.innerHTML = '';
 
             game.modules.forEach((module, index) => {
-                const canAfford = game.credits >= module.cost;
                 const div = document.createElement('div');
-                div.className = `upgrade ${!canAfford ? 'locked' : ''}`;
-
-                const production = module.owned > 0 ? formatNumber(module.owned * module.cps) + '/s' : '';
-
+                div.className = 'upgrade';
                 div.innerHTML = `
                     <div class="upgrade-header">
                         <div class="upgrade-icon">${module.icon}</div>
@@ -300,14 +292,32 @@
                         </div>
                     </div>
                     <div class="upgrade-stats">
-                        Owned: ${module.owned}
-                        ${production ? `<div class="upgrade-production">+${production}</div>` : ''}
+                        <span class="upgrade-owned"></span>
+                        <div class="upgrade-production"></div>
                     </div>
-                    <div class="upgrade-cost">Cost: ${formatNumber(module.cost)} Credits</div>
+                    <div class="upgrade-cost"></div>
                 `;
 
                 div.addEventListener('click', () => buyModule(index));
                 container.appendChild(div);
+            });
+        }
+
+        function updateDisplay() {
+            document.getElementById('credits').textContent = formatNumber(game.credits);
+            document.getElementById('perSec').textContent = formatNumber(game.creditsPerSecond);
+            document.getElementById('total').textContent = formatNumber(game.totalEarned);
+
+            const container = document.getElementById('upgrades');
+            game.modules.forEach((module, index) => {
+                const card = container.children[index];
+                const canAfford = game.credits >= module.cost;
+                const production = module.owned > 0 ? formatNumber(module.owned * module.cps) + '/s' : '';
+
+                card.className = `upgrade ${!canAfford ? 'locked' : ''}`;
+                card.querySelector('.upgrade-owned').textContent = `Owned: ${module.owned}`;
+                card.querySelector('.upgrade-production').innerHTML = production ? `+${production}` : '';
+                card.querySelector('.upgrade-cost').textContent = `Cost: ${formatNumber(module.cost)} Credits`;
             });
         }
 
@@ -355,6 +365,7 @@
         }
 
         game.lastSave = Date.now();
+        createCards();
         updateDisplay();
     </script>
 </body>

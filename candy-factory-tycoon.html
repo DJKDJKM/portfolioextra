@@ -274,21 +274,13 @@
             }
         }
 
-        function updateDisplay() {
-            document.getElementById('candies').textContent = formatNumber(game.candies);
-            document.getElementById('perSec').textContent = formatNumber(game.candiesPerSecond);
-            document.getElementById('total').textContent = formatNumber(game.totalProduced);
-
+        function createCards() {
             const container = document.getElementById('upgrades');
             container.innerHTML = '';
 
             game.upgrades.forEach((upgrade, index) => {
-                const canAfford = game.candies >= upgrade.cost;
                 const div = document.createElement('div');
-                div.className = `upgrade ${!canAfford ? 'locked' : ''}`;
-
-                const production = upgrade.owned > 0 ? formatNumber(upgrade.owned * upgrade.cps) + '/s' : '';
-
+                div.className = 'upgrade';
                 div.innerHTML = `
                     <div class="upgrade-header">
                         <div class="upgrade-icon">${upgrade.icon}</div>
@@ -298,14 +290,32 @@
                         </div>
                     </div>
                     <div class="upgrade-stats">
-                        Owned: ${upgrade.owned}
-                        ${production ? `<div class="upgrade-production">+${production}</div>` : ''}
+                        <span class="upgrade-owned"></span>
+                        <div class="upgrade-production"></div>
                     </div>
-                    <div class="upgrade-cost">Cost: ${formatNumber(upgrade.cost)} 🍬</div>
+                    <div class="upgrade-cost"></div>
                 `;
 
                 div.addEventListener('click', () => buyUpgrade(index));
                 container.appendChild(div);
+            });
+        }
+
+        function updateDisplay() {
+            document.getElementById('candies').textContent = formatNumber(game.candies);
+            document.getElementById('perSec').textContent = formatNumber(game.candiesPerSecond);
+            document.getElementById('total').textContent = formatNumber(game.totalProduced);
+
+            const container = document.getElementById('upgrades');
+            game.upgrades.forEach((upgrade, index) => {
+                const card = container.children[index];
+                const canAfford = game.candies >= upgrade.cost;
+                const production = upgrade.owned > 0 ? formatNumber(upgrade.owned * upgrade.cps) + '/s' : '';
+
+                card.className = `upgrade ${!canAfford ? 'locked' : ''}`;
+                card.querySelector('.upgrade-owned').textContent = `Owned: ${upgrade.owned}`;
+                card.querySelector('.upgrade-production').innerHTML = production ? `+${production}` : '';
+                card.querySelector('.upgrade-cost').textContent = `Cost: ${formatNumber(upgrade.cost)} 🍬`;
             });
         }
 
@@ -353,6 +363,7 @@
         }
 
         game.lastSave = Date.now();
+        createCards();
         updateDisplay();
     </script>
 </body>
